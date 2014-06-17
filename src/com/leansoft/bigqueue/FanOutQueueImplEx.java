@@ -8,7 +8,6 @@ import java.util.List;
 import wjw.psqueue.msg.ResQueueStatus;
 import wjw.psqueue.msg.ResSubStatus;
 import wjw.psqueue.msg.ResultCode;
-import wjw.psqueue.server.App;
 
 import com.leansoft.bigqueue.utils.FileUtil;
 
@@ -38,11 +37,19 @@ public class FanOutQueueImplEx extends FanOutQueueImpl {
 		FileUtil.deleteDirectory(new File(name));
 	}
 
+	public void addFanout(String fanoutId) throws IOException {
+		super.getQueueFront(fanoutId);
+	}
+
 	public void removeFanout(String fanoutId) throws IOException {
 		this.queueFrontMap.remove(fanoutId).indexPageFactory.deleteAllPages();
 
 		String dirName = innerArray.arrayDirectory + QUEUE_FRONT_INDEX_PAGE_FOLDER_PREFIX + fanoutId;
 		FileUtil.deleteDirectory(new File(dirName));
+	}
+
+	public boolean containFanout(String fanoutId) {
+		return this.queueFrontMap.containsKey(fanoutId);
 	}
 
 	public List<String> getAllFanoutNames() {
@@ -54,21 +61,12 @@ public class FanOutQueueImplEx extends FanOutQueueImpl {
 		return result;
 	}
 
-	public void initQueueFront(String fanoutId) throws IOException {
-		super.getQueueFront(fanoutId);
-	}
-
 	public ResQueueStatus getQueueInfo() throws IOException {
-		return new ResQueueStatus(ResultCode.SUCCESS, _queueName.substring(App.PREFIX_QUEUE.length()), super.size(), this.getRearIndex(), this.getFrontIndex());
+		return new ResQueueStatus(ResultCode.SUCCESS, _queueName, super.size(), this.getRearIndex(), this.getFrontIndex());
 	}
 
 	public ResSubStatus getFanoutInfo(String fanoutId) throws IOException {
-		return new ResSubStatus(ResultCode.SUCCESS,
-		    _queueName.substring(App.PREFIX_QUEUE.length()),
-		    fanoutId.substring(App.PREFIX_SUB.length(), fanoutId.lastIndexOf(_queueName)),
-		    super.size(fanoutId),
-		    this.getRearIndex(),
-		    this.getFrontIndex(fanoutId));
+		return new ResSubStatus(ResultCode.SUCCESS, _queueName, fanoutId, super.size(fanoutId), this.getRearIndex(), this.getFrontIndex(fanoutId));
 	}
 
 }

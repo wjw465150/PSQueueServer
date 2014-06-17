@@ -83,7 +83,6 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 	public DB _meta; //META数据库,保存队列名
 	final Map<String, FanOutQueueImplEx> _mapQueue = new ConcurrentHashMap<>();
-	final Map<String, String> _mapSub = new ConcurrentHashMap<>();
 
 	//GC的Scheduled
 	public ScheduledExecutorService _scheduleGc = Executors.newSingleThreadScheduledExecutor();
@@ -154,7 +153,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 	}
 
-	private String sanitizeFilename(String unsanitized) {
+	private String sanitizeFilename(final String unsanitized) {
 		return unsanitized.replaceAll("[\\?\\\\/:|<>\\*]", " ") // filter out ? \ / : | < > *
 		    .replaceAll("\\s", "_"); // white space as underscores
 	}
@@ -167,8 +166,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	private boolean validQueueName(String queueName) {
-		queueName = queueName.toUpperCase();
+	private boolean validQueueName(final String queueName) {
 		if (queueName.equalsIgnoreCase(NAME_META)) {
 			return false;
 		} else {
@@ -176,12 +174,11 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	private boolean validSubName(String queueName) {
-		queueName = queueName.toUpperCase();
-		if (queueName.equalsIgnoreCase(NAME_META)) {
+	private boolean validSubName(final String subName) {
+		if (subName.equalsIgnoreCase(NAME_META)) {
 			return false;
 		} else {
-			return queueName.equals(sanitizeFilename(queueName));
+			return subName.equals(sanitizeFilename(subName));
 		}
 	}
 
@@ -279,7 +276,8 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		return ResultCode.SUCCESS;
 	}
 
-	public ResultCode createQueue(final String queueName, final String user, final String pass) {
+	public ResultCode createQueue(String queueName, final String user, final String pass) {
+		queueName = queueName.toUpperCase();
 		if (validUser(user, pass) == false) {
 			return ResultCode.AUTHENTICATION_FAILURE;
 		}
@@ -288,23 +286,22 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 			return ResultCode.QUEUE_NAME_INVALID;
 		}
 
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		if (_mapQueue.get(fullQueueName) != null) {
+		if (_mapQueue.get(queueName) != null) {
 			return ResultCode.QUEUE_IS_EXIST;
 		}
 
 		try {
-			_mapQueue.put(fullQueueName, new FanOutQueueImplEx(_conf.dbPath, fullQueueName));
-			_meta.put(fullQueueName.getBytes(), fullQueueName.getBytes());
+			_mapQueue.put(queueName, new FanOutQueueImplEx(_conf.dbPath, queueName));
+			_meta.put((PREFIX_QUEUE + queueName).getBytes(), (PREFIX_QUEUE + queueName).getBytes());
 
 			return ResultCode.SUCCESS;
 		} catch (Exception ex) {
 			try {
-				_mapQueue.remove(fullQueueName).erase();
+				_mapQueue.remove(queueName).erase();
 			} catch (Exception e) {
 			}
 			try {
-				_meta.delete(fullQueueName.getBytes());
+				_meta.delete((PREFIX_QUEUE + queueName).getBytes());
 			} catch (Exception e) {
 			}
 
@@ -313,7 +310,9 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	public ResultCode createSub(final String queueName, final String subName, final String user, final String pass) {
+	public ResultCode createSub(String queueName, String subName, final String user, final String pass) {
+		queueName = queueName.toUpperCase();
+		subName = subName.toUpperCase();
 		if (validUser(user, pass) == false) {
 			return ResultCode.AUTHENTICATION_FAILURE;
 		}
@@ -325,31 +324,28 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 			return ResultCode.SUB_NAME_INVALID;
 		}
 
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return ResultCode.QUEUE_NOT_EXIST;
 		}
 
-		String fullSubName = PREFIX_SUB + subName.toUpperCase() + fullQueueName;
-		if (_mapSub.containsKey(fullSubName) == true) {
+		if (queue.containFanout(subName) == true) {
 			return ResultCode.SUB_IS_EXIST;
 		}
 
 		try {
-			queue.initQueueFront(fullSubName);
+			queue.addFanout(subName);
 
-			_mapSub.put(fullSubName, fullSubName);
-			_meta.put(fullSubName.getBytes(), fullSubName.getBytes());
+			_meta.put((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes(), (PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
 
 			return ResultCode.SUCCESS;
 		} catch (Exception ex) {
 			try {
-				queue.removeFanout(fullSubName);
+				queue.removeFanout(subName);
 			} catch (Exception e) {
 			}
 			try {
-				_meta.delete(fullSubName.getBytes());
+				_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
 			} catch (Exception e) {
 			}
 
@@ -358,27 +354,22 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	public ResultCode removeQueue(final String queueName, final String user, final String pass) {
+	public ResultCode removeQueue(String queueName, final String user, final String pass) {
+		queueName = queueName.toUpperCase();
 		if (validUser(user, pass) == false) {
 			return ResultCode.AUTHENTICATION_FAILURE;
 		}
 
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return ResultCode.QUEUE_NOT_EXIST;
 		}
 
 		try {
-			queue = _mapQueue.remove(fullQueueName);
+			queue = _mapQueue.remove(queueName);
 			queue.erase();
-			for (String fullSubName : _mapSub.keySet()) {
-				if (fullSubName.endsWith(fullQueueName)) {
-					_mapSub.remove(fullSubName);
-				}
-			}
 
-			_meta.delete(fullQueueName.getBytes());
+			_meta.delete((PREFIX_QUEUE + queueName).getBytes());
 
 			return ResultCode.SUCCESS;
 		} catch (Exception ex) {
@@ -387,26 +378,25 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	public ResultCode removeSub(final String queueName, final String subName, final String user, final String pass) {
+	public ResultCode removeSub(String queueName, String subName, final String user, final String pass) {
+		queueName = queueName.toUpperCase();
+		subName = subName.toUpperCase();
 		if (validUser(user, pass) == false) {
 			return ResultCode.AUTHENTICATION_FAILURE;
 		}
 
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return ResultCode.QUEUE_NOT_EXIST;
 		}
 
-		String fullSubName = PREFIX_SUB + subName.toUpperCase() + fullQueueName;
-		if (_mapSub.containsKey(fullSubName) == false) {
+		if (queue.containFanout(subName) == false) {
 			return ResultCode.SUB_NOT_EXIST;
 		}
 
 		try {
-			queue.removeFanout(fullSubName);
-			_mapSub.remove(fullSubName);
-			_meta.delete(fullSubName.getBytes());
+			queue.removeFanout(subName);
+			_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
 
 			return ResultCode.SUCCESS;
 		} catch (Exception ex) {
@@ -415,9 +405,9 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	public ResQueueStatus status(final String queueName) {
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+	public ResQueueStatus status(String queueName) {
+		queueName = queueName.toUpperCase();
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return new ResQueueStatus(ResultCode.QUEUE_NOT_EXIST, queueName);
 		}
@@ -430,20 +420,20 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	public ResSubStatus statusForSub(final String queueName, final String subName) {
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+	public ResSubStatus statusForSub(String queueName, String subName) {
+		queueName = queueName.toUpperCase();
+		subName = subName.toUpperCase();
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return new ResSubStatus(ResultCode.QUEUE_NOT_EXIST, queueName, subName);
 		}
 
-		String fullSubName = PREFIX_SUB + subName.toUpperCase() + fullQueueName;
-		if (_mapSub.containsKey(fullSubName) == false) {
+		if (queue.containFanout(subName) == false) {
 			return new ResSubStatus(ResultCode.SUB_NOT_EXIST, queueName, subName);
 		}
 
 		try {
-			return queue.getFanoutInfo(fullSubName);
+			return queue.getFanoutInfo(subName);
 		} catch (Exception ex) {
 			_log.error(ex.getMessage(), ex);
 			return new ResSubStatus(ResultCode.INTERNAL_ERROR, queueName, subName);
@@ -453,35 +443,30 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	public ResList queueNames() {
 		List<String> llst = new ArrayList<String>(_mapQueue.size());
 		for (String name : _mapQueue.keySet()) {
-			llst.add(name.substring(PREFIX_QUEUE.length()));
+			llst.add(name);
 		}
 
 		return new ResList(ResultCode.SUCCESS, llst);
 	}
 
-	public ResList subNames(final String queueName) {
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+	public ResList subNames(String queueName) {
+		queueName = queueName.toUpperCase();
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return new ResList(ResultCode.QUEUE_NOT_EXIST);
 		}
 
-		List<String> llst = new ArrayList<String>();
-		for (String name : _mapSub.keySet()) {
-			if (name.endsWith(fullQueueName)) {
-				llst.add(name.substring(PREFIX_SUB.length(), name.lastIndexOf(fullQueueName)));
-			}
-		}
+		List<String> llst = queue.getAllFanoutNames();
 		return new ResList(ResultCode.SUCCESS, llst);
 	}
 
-	public ResultCode resetQueue(final String queueName, final String user, final String pass) {
+	public ResultCode resetQueue(String queueName, final String user, final String pass) {
+		queueName = queueName.toUpperCase();
 		if (validUser(user, pass) == false) {
 			return ResultCode.AUTHENTICATION_FAILURE;
 		}
 
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return ResultCode.QUEUE_NOT_EXIST;
 		}
@@ -495,9 +480,9 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	public ResAdd add(final String queueName, final String data) {
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+	public ResAdd add(String queueName, final String data) {
+		queueName = queueName.toUpperCase();
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return new ResAdd(ResultCode.QUEUE_NOT_EXIST);
 		}
@@ -512,20 +497,20 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	public ResData poll(final String queueName, final String subName) {
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+	public ResData poll(String queueName, String subName) {
+		queueName = queueName.toUpperCase();
+		subName = subName.toUpperCase();
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return new ResData(ResultCode.QUEUE_NOT_EXIST);
 		}
 
-		String fullSubName = PREFIX_SUB + subName.toUpperCase() + fullQueueName;
-		if (_mapSub.containsKey(fullSubName) == false) {
+		if (queue.containFanout(subName) == false) {
 			return new ResData(ResultCode.SUB_NOT_EXIST);
 		}
 
 		try {
-			byte[] bb = queue.dequeue(fullSubName);
+			byte[] bb = queue.dequeue(subName);
 			if (bb == null) {
 				return new ResData(ResultCode.ALL_MESSAGE_CONSUMED);
 			} else {
@@ -541,9 +526,9 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
-	public ResData view(final String queueName, final long pos) {
-		String fullQueueName = PREFIX_QUEUE + queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(fullQueueName);
+	public ResData view(String queueName, final long pos) {
+		queueName = queueName.toUpperCase();
+		FanOutQueueImplEx queue = _mapQueue.get(queueName);
 		if (queue == null) {
 			return new ResData(ResultCode.QUEUE_NOT_EXIST);
 		}
@@ -582,11 +567,12 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 				_meta = JniDBFactory.factory.open(new File(_conf.dbPath + "/" + NAME_META), options);
 
-				try (DBIterator dbIterator = _meta.iterator()) { //初始化Queue
+				try (DBIterator dbIterator = _meta.iterator()) { //初始化_mapQueue
 					for (dbIterator.seekToFirst(); dbIterator.hasNext(); dbIterator.next()) {
 						String metaKey = new String(dbIterator.peekNext().getKey());
 						if (metaKey.startsWith(PREFIX_QUEUE)) {
-							_mapQueue.put(metaKey, new FanOutQueueImplEx(_conf.dbPath, metaKey));
+							String queueName = metaKey.substring(PREFIX_QUEUE.length());
+							_mapQueue.put(queueName, new FanOutQueueImplEx(_conf.dbPath, queueName));
 						}
 					}
 				}
@@ -595,8 +581,9 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 					for (dbIterator.seekToFirst(); dbIterator.hasNext(); dbIterator.next()) {
 						String metaKey = new String(dbIterator.peekNext().getKey());
 						if (metaKey.startsWith(PREFIX_SUB)) {
-							_mapQueue.get(metaKey.substring(metaKey.lastIndexOf(PREFIX_QUEUE))).initQueueFront(metaKey);
-							_mapSub.put(metaKey, metaKey);
+							String queueName = metaKey.substring(metaKey.lastIndexOf(PREFIX_QUEUE) + PREFIX_QUEUE.length());
+							String subName = metaKey.substring(PREFIX_SUB.length(), metaKey.lastIndexOf(PREFIX_QUEUE));
+							_mapQueue.get(queueName).addFanout(subName);
 						}
 					}
 				}
