@@ -70,8 +70,8 @@ import com.leansoft.bigqueue.FanOutQueueImplEx;
 public class App extends StandardMBean implements AppMXBean, Runnable {
 	public static final String DB_CHARSET = "UTF-8"; //数据库字符集
 	public static final String NAME_META = "#META#";
-	public static final String PREFIX_QUEUE = "#Q#";
-	public static final String PREFIX_SUB = "#S#";
+	public static final String PREFIX_QUEUE = "Q:";
+	public static final String PREFIX_SUB = "S:";
 
 	org.slf4j.Logger _log = org.slf4j.LoggerFactory.getLogger(this.getClass());
 	private final String CONF_NAME; //配置文件
@@ -169,6 +169,10 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	private boolean validQueueName(final String queueName) {
 		if (queueName.equalsIgnoreCase(NAME_META)) {
 			return false;
+		} else if (queueName.toUpperCase().contains(PREFIX_QUEUE)) {
+			return false;
+		} else if (queueName.toUpperCase().contains(PREFIX_SUB)) {
+			return false;
 		} else {
 			return queueName.equals(sanitizeFilename(queueName));
 		}
@@ -176,6 +180,10 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 	private boolean validSubName(final String subName) {
 		if (subName.equalsIgnoreCase(NAME_META)) {
+			return false;
+		} else if (subName.toUpperCase().contains(PREFIX_QUEUE)) {
+			return false;
+		} else if (subName.toUpperCase().contains(PREFIX_SUB)) {
 			return false;
 		} else {
 			return subName.equals(sanitizeFilename(subName));
