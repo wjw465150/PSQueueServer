@@ -7,8 +7,8 @@ public class ResultCode {
 	public final static ResultCode AUTHENTICATION_FAILURE = new ResultCode(3, "authentication failure");
 	public final static ResultCode QUEUE_NOT_EXIST = new ResultCode(4, "queue not exist");
 	public final static ResultCode SUB_NOT_EXIST = new ResultCode(5, "Subscriber not exist");
-	public final static ResultCode QUEUE_NAME_INVALID = new ResultCode(6, "invalid queue name!queue name not include:\\S\\?\\\\/:|<>\\* and _META_");
-	public final static ResultCode SUB_NAME_INVALID = new ResultCode(7, "invalid Subscriber name!Subscriber name not include:\\S\\?\\\\/:|<>\\* and _META_");
+	public final static ResultCode QUEUE_NAME_INVALID = new ResultCode(6, "invalid queue name!queue name not include:? \\ / : | < > * and _META_");
+	public final static ResultCode SUB_NAME_INVALID = new ResultCode(7, "invalid Subscriber name!Subscriber name not include:? \\ / : | < > * and _META_");
 	public final static ResultCode SUB_IS_EXIST = new ResultCode(8, "Subscriber is already exist");
 	public final static ResultCode QUEUE_IS_EXIST = new ResultCode(9, "queue is already exist");
 	public final static ResultCode QUEUE_IS_EMPTY = new ResultCode(10, "queue is empty");
