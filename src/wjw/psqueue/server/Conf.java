@@ -44,7 +44,7 @@ public class Conf {
 	public String dbPath = ""; //数据库目录,缺省在:System.getProperty("user.dir", ".") + "/db"
 
 	@XmlElement(required = true)
-	public int gcInterval = 10; //GC间隔时间(分钟)
+	public int gcInterval = 30; //GC间隔时间(分钟)
 
 	@XmlElement(required = true)
 	public long dbFileMaxSize = 2147483648L; //队列数据文件最大大小(字节,缺省2G)

@@ -22,6 +22,8 @@ import org.wjw.efjson.JsonObject;
 
 import wjw.psqueue.msg.ResAdd;
 import wjw.psqueue.msg.ResData;
+import wjw.psqueue.msg.ResList;
+import wjw.psqueue.msg.ResQueueStatus;
 import wjw.psqueue.msg.ResSubStatus;
 import wjw.psqueue.msg.ResultCode;
 
@@ -98,16 +100,8 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 
 	private void writeResponse(ChannelHandlerContext ctx, FullHttpRequest request, Map<String, List<String>> parameters, Charset charsetObj) {
 		//接收GET表单参数
-		final String queueName = (null != parameters.get("qname")) ? parameters.get("qname").get(0) : null; // 队列名称 
-		final String subName = (null != parameters.get("sname")) ? parameters.get("sname").get(0) : null; // 队列名称 
 		final String opt = (null != parameters.get("opt")) ? parameters.get("opt").get(0) : null; //操作类别
-		String data = (null != parameters.get("data")) ? parameters.get("data").get(0) : null; //队列数据
-		final String pos_tmp = (null != parameters.get("pos")) ? parameters.get("pos").get(0) : null; //队列位置点
-
-		long pos = 0;
-		if (null != pos_tmp) {
-			pos = Long.parseLong(pos_tmp);
-		}
+		final String queueName = (null != parameters.get("qname")) ? parameters.get("qname").get(0) : null; // 队列名称 
 
 		//返回给用户的Header头信息
 		FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.buffer(64));
@@ -118,45 +112,108 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 		ByteBuf respBuf = response.content(); //Buffer that stores the response content
 		try {
 			String jsonString;
-			if (opt != null && queueName != null) {
+			if (opt != null) {
 				switch (opt) {
-				case "add": {
-					/* 优先接收POST正文信息 */
-					if (request.getMethod().name().equalsIgnoreCase("POST")) {
-						data = URLDecoder.decode(request.content().toString(charsetObj), charsetObj.name());
-						ResAdd res = _app.add(queueName, data);
-						jsonString = JsonObject.toJson(res);
-					} else if (null != data) { //如果POST正文无内容，则取URL中data参数的值
-						ResAdd res = _app.add(queueName, data);
-						jsonString = JsonObject.toJson(res);
-					} else {
-						ResAdd res = new ResAdd(ResultCode.QUEUE_ADD_ERROR);
+					case "add": {
+						/* 优先接收POST正文信息 */
+						if (request.getMethod().name().equalsIgnoreCase("POST")) {
+							String data = URLDecoder.decode(request.content().toString(charsetObj), charsetObj.name());
+							ResAdd res = _app.add(queueName, data);
+							jsonString = JsonObject.toJson(res);
+						} else { //如果POST正文无内容，则取URL中data参数的值
+							String data = (null != parameters.get("data")) ? parameters.get("data").get(0) : null; //队列数据
+							if (data != null) {
+								ResAdd res = _app.add(queueName, data);
+								jsonString = JsonObject.toJson(res);
+							} else {
+								ResAdd res = new ResAdd(ResultCode.QUEUE_ADD_ERROR);
+								jsonString = JsonObject.toJson(res);
+							}
+						}
+					}
+						break;
+					case "poll": {
+						final String subName = (null != parameters.get("sname")) ? parameters.get("sname").get(0) : null; // 订阅者名称 
+						ResData res = _app.poll(queueName, subName);
 						jsonString = JsonObject.toJson(res);
 					}
-				}
-					break;
-				case "poll": {
-					ResData res = _app.poll(queueName, subName);
-					jsonString = JsonObject.toJson(res);
-				}
-					break;
-				case "view": {
-					ResData res = _app.view(queueName, pos);
-					jsonString = JsonObject.toJson(res);
-				}
-					break;
-				case "status": {
-					ResSubStatus res = _app.statusForSub(queueName, subName);
-					jsonString = JsonObject.toJson(res);
-				}
-					break;
-				default: {
-					jsonString = JsonObject.toJson(new ResData(ResultCode.CMD_INVALID));
-				}
-					break;
+						break;
+					case "view": {
+						final String pos_tmp = (null != parameters.get("pos")) ? parameters.get("pos").get(0) : null; //队列位置点
+
+						long pos = 0;
+						if (null != pos_tmp) {
+							pos = Long.parseLong(pos_tmp);
+						}
+						ResData res = _app.view(queueName, pos);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "status": {
+						ResQueueStatus res = _app.status(queueName);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "statusForSub": {
+						final String subName = (null != parameters.get("sname")) ? parameters.get("sname").get(0) : null; // 订阅者名称 
+						ResSubStatus res = _app.statusForSub(queueName, subName);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "createQueue": {
+						final String user = (null != parameters.get("user")) ? parameters.get("user").get(0) : "";
+						final String pass = (null != parameters.get("pass")) ? parameters.get("pass").get(0) : "";
+						ResultCode res = _app.createQueue(queueName, user, pass);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "createSub": {
+						final String subName = (null != parameters.get("sname")) ? parameters.get("sname").get(0) : null; // 订阅者名称 
+						final String user = (null != parameters.get("user")) ? parameters.get("user").get(0) : "";
+						final String pass = (null != parameters.get("pass")) ? parameters.get("pass").get(0) : "";
+						ResultCode res = _app.createSub(queueName, subName, user, pass);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "removeQueue": {
+						final String user = (null != parameters.get("user")) ? parameters.get("user").get(0) : "";
+						final String pass = (null != parameters.get("pass")) ? parameters.get("pass").get(0) : "";
+						ResultCode res = _app.removeQueue(queueName, user, pass);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "removeSub": {
+						final String subName = (null != parameters.get("sname")) ? parameters.get("sname").get(0) : null; // 订阅者名称 
+						final String user = (null != parameters.get("user")) ? parameters.get("user").get(0) : "";
+						final String pass = (null != parameters.get("pass")) ? parameters.get("pass").get(0) : "";
+						ResultCode res = _app.removeSub(queueName, subName, user, pass);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "queueNames": {
+						ResList res = _app.queueNames();
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "subNames": {
+						ResList res = _app.subNames(queueName);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "resetQueue": {
+						final String user = (null != parameters.get("user")) ? parameters.get("user").get(0) : "";
+						final String pass = (null != parameters.get("pass")) ? parameters.get("pass").get(0) : "";
+						ResultCode res = _app.resetQueue(queueName, user, pass);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					default: {
+						jsonString = JsonObject.toJson(new ResData(ResultCode.CMD_INVALID));
+					}
+						break;
 				}
 			} else {
-				jsonString = JsonObject.toJson(new ResData(ResultCode.QUEUE_NAME_INVALID));
+				jsonString = JsonObject.toJson(new ResData(ResultCode.CMD_INVALID));
 			}
 
 			respBuf.writeBytes(jsonString.getBytes(charsetObj));

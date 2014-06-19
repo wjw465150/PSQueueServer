@@ -11,7 +11,7 @@ import wjw.psqueue.server.jmx.annotation.Description;
 import wjw.psqueue.server.jmx.annotation.ManagedOperation;
 
 public interface AppMXBean {
-	@ManagedOperation(description = "回收垃圾文件")
+	@ManagedOperation(description = "手工回收垃圾文件")
 	public ResultCode gc();
 
 	@ManagedOperation(description = "创建队列")
@@ -37,10 +37,10 @@ public interface AppMXBean {
 			@Description(name = "user", description = "用户名") final String user,
 			@Description(name = "pass", description = "口令") final String pass);
 
-	@ManagedOperation(description = "队列状态")
+	@ManagedOperation(description = "查看队列状态")
 	public ResQueueStatus status(@Description(name = "queueName", description = "队列名") String queueName);
 
-	@ManagedOperation(description = "队列状态")
+	@ManagedOperation(description = "查看指定队列指定订阅者的消息状态")
 	public ResSubStatus statusForSub(@Description(name = "queueName", description = "队列名") String queueName, 
 			@Description(name = "subName", description = "订阅者名") String subName);
 

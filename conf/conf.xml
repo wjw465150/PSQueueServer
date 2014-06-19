@@ -6,7 +6,7 @@
     <soTimeout>60</soTimeout>
     <defaultCharset>UTF-8</defaultCharset>
     <dbPath></dbPath>
-    <gcInterval>10</gcInterval>
+    <gcInterval>30</gcInterval>
     <dbFileMaxSize>1073741824</dbFileMaxSize>
     <adminUser>admin</adminUser>
     <adminPass>123456</adminPass>
