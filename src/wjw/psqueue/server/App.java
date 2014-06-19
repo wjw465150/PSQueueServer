@@ -28,6 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.management.MBeanInfo;
 import javax.management.MBeanOperationInfo;
@@ -90,6 +92,8 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	private io.netty.channel.Channel _channel; //Socket通道
 	private EventLoopGroup _bossGroup;
 	private EventLoopGroup _workerGroup;
+
+	private static Lock _lock = new ReentrantLock(); //创建,删除队列,订阅者的锁
 
 	//初始化
 	static {
@@ -285,131 +289,151 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	}
 
 	public ResultCode createQueue(String queueName, final String user, final String pass) {
-		queueName = queueName.toUpperCase();
-		if (validUser(user, pass) == false) {
-			return ResultCode.AUTHENTICATION_FAILURE;
-		}
-
-		if (validQueueName(queueName) == false) {
-			return ResultCode.QUEUE_NAME_INVALID;
-		}
-
-		if (_mapQueue.get(queueName) != null) {
-			return ResultCode.QUEUE_IS_EXIST;
-		}
-
+		_lock.lock();
 		try {
-			_mapQueue.put(queueName, new FanOutQueueImplEx(_conf.dbPath, queueName));
-			_meta.put((PREFIX_QUEUE + queueName).getBytes(), (PREFIX_QUEUE + queueName).getBytes());
-
-			return ResultCode.SUCCESS;
-		} catch (Exception ex) {
-			try {
-				_mapQueue.remove(queueName).erase();
-			} catch (Exception e) {
-			}
-			try {
-				_meta.delete((PREFIX_QUEUE + queueName).getBytes());
-			} catch (Exception e) {
+			queueName = queueName.toUpperCase();
+			if (validUser(user, pass) == false) {
+				return ResultCode.AUTHENTICATION_FAILURE;
 			}
 
-			_log.error(ex.getMessage(), ex);
-			return ResultCode.QUEUE_CREATE_ERROR;
+			if (validQueueName(queueName) == false) {
+				return ResultCode.QUEUE_NAME_INVALID;
+			}
+
+			if (_mapQueue.get(queueName) != null) {
+				return ResultCode.QUEUE_IS_EXIST;
+			}
+
+			try {
+				_mapQueue.put(queueName, new FanOutQueueImplEx(_conf.dbPath, queueName));
+				_meta.put((PREFIX_QUEUE + queueName).getBytes(), (PREFIX_QUEUE + queueName).getBytes());
+
+				return ResultCode.SUCCESS;
+			} catch (Exception ex) {
+				try {
+					_mapQueue.remove(queueName).erase();
+				} catch (Exception e) {
+				}
+				try {
+					_meta.delete((PREFIX_QUEUE + queueName).getBytes());
+				} catch (Exception e) {
+				}
+
+				_log.error(ex.getMessage(), ex);
+				return ResultCode.QUEUE_CREATE_ERROR;
+			}
+		} finally {
+			_lock.unlock();
 		}
 	}
 
 	public ResultCode createSub(String queueName, String subName, final String user, final String pass) {
-		queueName = queueName.toUpperCase();
-		subName = subName.toUpperCase();
-		if (validUser(user, pass) == false) {
-			return ResultCode.AUTHENTICATION_FAILURE;
-		}
-
-		if (validQueueName(queueName) == false) {
-			return ResultCode.QUEUE_NAME_INVALID;
-		}
-		if (validSubName(subName) == false) {
-			return ResultCode.SUB_NAME_INVALID;
-		}
-
-		FanOutQueueImplEx queue = _mapQueue.get(queueName);
-		if (queue == null) {
-			return ResultCode.QUEUE_NOT_EXIST;
-		}
-
-		if (queue.containFanout(subName) == true) {
-			return ResultCode.SUB_IS_EXIST;
-		}
-
+		_lock.lock();
 		try {
-			queue.addFanout(subName);
-
-			_meta.put((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes(), (PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
-
-			return ResultCode.SUCCESS;
-		} catch (Exception ex) {
-			try {
-				queue.removeFanout(subName);
-			} catch (Exception e) {
-			}
-			try {
-				_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
-			} catch (Exception e) {
+			queueName = queueName.toUpperCase();
+			subName = subName.toUpperCase();
+			if (validUser(user, pass) == false) {
+				return ResultCode.AUTHENTICATION_FAILURE;
 			}
 
-			_log.error(ex.getMessage(), ex);
-			return ResultCode.QUEUE_CREATE_ERROR;
+			if (validQueueName(queueName) == false) {
+				return ResultCode.QUEUE_NAME_INVALID;
+			}
+			if (validSubName(subName) == false) {
+				return ResultCode.SUB_NAME_INVALID;
+			}
+
+			FanOutQueueImplEx queue = _mapQueue.get(queueName);
+			if (queue == null) {
+				return ResultCode.QUEUE_NOT_EXIST;
+			}
+
+			if (queue.containFanout(subName) == true) {
+				return ResultCode.SUB_IS_EXIST;
+			}
+
+			try {
+				queue.addFanout(subName);
+
+				_meta.put((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes(), (PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
+
+				return ResultCode.SUCCESS;
+			} catch (Exception ex) {
+				try {
+					queue.removeFanout(subName);
+				} catch (Exception e) {
+				}
+				try {
+					_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
+				} catch (Exception e) {
+				}
+
+				_log.error(ex.getMessage(), ex);
+				return ResultCode.QUEUE_CREATE_ERROR;
+			}
+		} finally {
+			_lock.unlock();
 		}
 	}
 
 	public ResultCode removeQueue(String queueName, final String user, final String pass) {
-		queueName = queueName.toUpperCase();
-		if (validUser(user, pass) == false) {
-			return ResultCode.AUTHENTICATION_FAILURE;
-		}
-
-		FanOutQueueImplEx queue = _mapQueue.get(queueName);
-		if (queue == null) {
-			return ResultCode.QUEUE_NOT_EXIST;
-		}
-
+		_lock.lock();
 		try {
-			queue = _mapQueue.remove(queueName);
-			queue.erase();
+			queueName = queueName.toUpperCase();
+			if (validUser(user, pass) == false) {
+				return ResultCode.AUTHENTICATION_FAILURE;
+			}
 
-			_meta.delete((PREFIX_QUEUE + queueName).getBytes());
+			FanOutQueueImplEx queue = _mapQueue.get(queueName);
+			if (queue == null) {
+				return ResultCode.QUEUE_NOT_EXIST;
+			}
 
-			return ResultCode.SUCCESS;
-		} catch (Exception ex) {
-			_log.error(ex.getMessage(), ex);
-			return ResultCode.SUB_REMOVE_ERROR;
+			try {
+				queue = _mapQueue.remove(queueName);
+				queue.erase();
+
+				_meta.delete((PREFIX_QUEUE + queueName).getBytes());
+
+				return ResultCode.SUCCESS;
+			} catch (Exception ex) {
+				_log.error(ex.getMessage(), ex);
+				return ResultCode.SUB_REMOVE_ERROR;
+			}
+		} finally {
+			_lock.unlock();
 		}
 	}
 
 	public ResultCode removeSub(String queueName, String subName, final String user, final String pass) {
-		queueName = queueName.toUpperCase();
-		subName = subName.toUpperCase();
-		if (validUser(user, pass) == false) {
-			return ResultCode.AUTHENTICATION_FAILURE;
-		}
-
-		FanOutQueueImplEx queue = _mapQueue.get(queueName);
-		if (queue == null) {
-			return ResultCode.QUEUE_NOT_EXIST;
-		}
-
-		if (queue.containFanout(subName) == false) {
-			return ResultCode.SUB_NOT_EXIST;
-		}
-
+		_lock.lock();
 		try {
-			queue.removeFanout(subName);
-			_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
+			queueName = queueName.toUpperCase();
+			subName = subName.toUpperCase();
+			if (validUser(user, pass) == false) {
+				return ResultCode.AUTHENTICATION_FAILURE;
+			}
 
-			return ResultCode.SUCCESS;
-		} catch (Exception ex) {
-			_log.error(ex.getMessage(), ex);
-			return ResultCode.SUB_REMOVE_ERROR;
+			FanOutQueueImplEx queue = _mapQueue.get(queueName);
+			if (queue == null) {
+				return ResultCode.QUEUE_NOT_EXIST;
+			}
+
+			if (queue.containFanout(subName) == false) {
+				return ResultCode.SUB_NOT_EXIST;
+			}
+
+			try {
+				queue.removeFanout(subName);
+				_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
+
+				return ResultCode.SUCCESS;
+			} catch (Exception ex) {
+				_log.error(ex.getMessage(), ex);
+				return ResultCode.SUB_REMOVE_ERROR;
+			}
+		} finally {
+			_lock.unlock();
 		}
 	}
 

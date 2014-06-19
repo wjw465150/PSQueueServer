@@ -20,7 +20,7 @@ public interface AppMXBean {
 	@Description(name = "user", description = "用户名") final String user,
 	@Description(name = "pass", description = "口令") final String pass);
 
-	@ManagedOperation(description = "创建指定队列的指定消费者")
+	@ManagedOperation(description = "创建指定队列的指定订阅者")
 	public ResultCode createSub(@Description(name = "queueName", description = "队列名") String queueName, 
 			@Description(name = "subName", description = "订阅者名") String subName,
 	@Description(name = "user", description = "用户名") final String user,
@@ -31,7 +31,7 @@ public interface AppMXBean {
 			@Description(name = "user", description = "用户名") final String user,
 			@Description(name = "pass", description = "口令") final String pass);
 
-	@ManagedOperation(description = "删除指定队列的指定消费者")
+	@ManagedOperation(description = "删除指定队列的指定订阅者")
 	public ResultCode removeSub(@Description(name = "queueName", description = "队列名") String queueName, 
 			@Description(name = "subName", description = "订阅者名") String subName,
 			@Description(name = "user", description = "用户名") final String user,
