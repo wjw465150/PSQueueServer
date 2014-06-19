@@ -5,7 +5,7 @@
 #### PSQueueServer 具有以下特征：
 
 + [x] 非常简单，基于 HTTP GET/POST 协议。PHP、Java、Perl、Shell、Python、Ruby等支持HTTP协议的编程语言均可调用。
-+ [x] 完善的JMX管理接口,所有方法全部可以由JMX来管理.HTTP协议方法只暴露了add,poll,view,status这几个方法!
++ [x] 完善的JMX管理接口,所有方法全部可以由JMX来管理.为了安全管理方法需要口令!
 + [x] 每个队列支持任意多消费者。
 + [x] 非常快速，入队列、出队列速度超过40000次/秒。
 + [x] 高并发，支持5K以上的并发连接。

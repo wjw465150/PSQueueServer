@@ -7,7 +7,7 @@
     <defaultCharset>UTF-8</defaultCharset>
     <dbPath></dbPath>
     <gcInterval>30</gcInterval>
-    <dbFileMaxSize>1073741824</dbFileMaxSize>
+    <dbFileMaxSize>2147483648</dbFileMaxSize>
     <adminUser>admin</adminUser>
     <adminPass>123456</adminPass>
     <jmxPort>1819</jmxPort>
