@@ -391,9 +391,14 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 			try {
 				queue = _mapQueue.remove(queueName);
+				List<String> subNames = queue.getAllFanoutNames();
 				queue.erase();
 
 				_meta.delete((PREFIX_QUEUE + queueName).getBytes());
+
+				for (String subName : subNames) {
+					_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
+				}
 
 				return ResultCode.SUCCESS;
 			} catch (Exception ex) {
