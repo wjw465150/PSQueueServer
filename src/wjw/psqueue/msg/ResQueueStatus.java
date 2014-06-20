@@ -4,11 +4,15 @@ import java.beans.ConstructorProperties;
 import java.io.Serializable;
 
 public class ResQueueStatus implements Serializable {
-	public final ResultCode status;
-	public final String queueName;
-	public final long size;
-	public final long head;
-	public final long tail;
+	public ResultCode status;
+	public String queueName;
+	public long size;
+	public long head;
+	public long tail;
+
+	public ResQueueStatus() {
+
+	}
 
 	@ConstructorProperties({ "status", "queueName" })
 	public ResQueueStatus(ResultCode status, String queueName) {

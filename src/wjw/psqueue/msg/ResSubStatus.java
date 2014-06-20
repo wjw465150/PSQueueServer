@@ -4,12 +4,16 @@ import java.beans.ConstructorProperties;
 import java.io.Serializable;
 
 public class ResSubStatus implements Serializable {
-	public final ResultCode status;
-	public final String queueName;
-	public final String subName;
-	public final long size;
-	public final long head;
-	public final long tail;
+	public ResultCode status;
+	public String queueName;
+	public String subName;
+	public long size;
+	public long head;
+	public long tail;
+
+	public ResSubStatus() {
+
+	}
 
 	@ConstructorProperties({ "status", "queueName", "subName" })
 	public ResSubStatus(ResultCode status, String queueName, String subName) {

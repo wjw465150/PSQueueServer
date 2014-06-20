@@ -4,8 +4,12 @@ import java.beans.ConstructorProperties;
 import java.io.Serializable;
 
 public class ResAdd implements Serializable {
-	public final ResultCode status;
-	public final long idx;
+	public ResultCode status;
+	public long idx;
+
+	public ResAdd() {
+
+	}
 
 	@ConstructorProperties({ "status" })
 	public ResAdd(ResultCode status) {
@@ -28,10 +32,10 @@ public class ResAdd implements Serializable {
 	}
 
 	@Override
-  public String toString() {
-	  StringBuilder builder = new StringBuilder();
-	  builder.append("ResAdd [status=").append(status).append(", idx=").append(idx).append("]");
-	  return builder.toString();
-  }
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("ResAdd [status=").append(status).append(", idx=").append(idx).append("]");
+		return builder.toString();
+	}
 
 }

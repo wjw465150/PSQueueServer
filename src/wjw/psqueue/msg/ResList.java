@@ -6,8 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ResList implements Serializable {
-	public final ResultCode status;
-	public final List<String> data;
+	public ResultCode status;
+	public List<String> data;
+
+	public ResList() {
+
+	}
 
 	@ConstructorProperties({ "status" })
 	public ResList(ResultCode status) {

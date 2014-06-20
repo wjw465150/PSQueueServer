@@ -1,5 +1,7 @@
 package wjw.psqueue.msg;
 
+import java.beans.ConstructorProperties;
+
 public class ResultCode {
 	public final static ResultCode SUCCESS = new ResultCode(0, "ok");
 	public final static ResultCode CMD_INVALID = new ResultCode(1, "Invalid opt command!");
@@ -20,10 +22,14 @@ public class ResultCode {
 	public final static ResultCode QUEUE_POLL_ERROR = new ResultCode(16, "queue poll error");
 	public final static ResultCode ALL_MESSAGE_CONSUMED = new ResultCode(17, "all message consumed");
 
-	private final int code;
-	private final String msg;
+	public int code;
+	public String msg;
 
-	ResultCode(final int code, final String msg) {
+	public ResultCode() {
+	}
+
+	@ConstructorProperties({ "code", "msg" })
+	public ResultCode(final int code, final String msg) {
 		this.code = code;
 		this.msg = msg;
 	}

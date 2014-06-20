@@ -68,7 +68,7 @@ import com.leansoft.bigqueue.FanOutQueueImplEx;
 /**
  * 开源轻量级"扇出队列"服务. User: wstone Date: 2014-06-11 Time: 11:11:11
  */
-@MBean(objectName = "org.psqueue:type=PSQueueServer", description = "PubSub Queue Server")
+@MBean(objectName = "wjw.psqueue:type=PSQueueServer", description = "PubSub Queue Server")
 public class App extends StandardMBean implements AppMXBean, Runnable {
 	public static final String DB_CHARSET = "UTF-8"; //数据库字符集
 	public static final String NAME_META = "#META#";

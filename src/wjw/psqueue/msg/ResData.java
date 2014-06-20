@@ -4,8 +4,12 @@ import java.beans.ConstructorProperties;
 import java.io.Serializable;
 
 public class ResData implements Serializable {
-	public final ResultCode status;
-	public final String data;
+	public ResultCode status;
+	public String data;
+
+	public ResData() {
+
+	}
 
 	@ConstructorProperties({ "status" })
 	public ResData(ResultCode status) {
