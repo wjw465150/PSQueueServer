@@ -45,10 +45,6 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.xml.DOMConfigurator;
-import org.fusesource.leveldbjni.JniDBFactory;
-import org.iq80.leveldb.DB;
-import org.iq80.leveldb.DBIterator;
-import org.iq80.leveldb.Options;
 import org.tanukisoftware.wrapper.WrapperManager;
 
 import wjw.psqueue.msg.ResAdd;
@@ -71,9 +67,6 @@ import com.leansoft.bigqueue.FanOutQueueImplEx;
 @MBean(objectName = "wjw.psqueue:type=PSQueueServer", description = "PubSub Queue Server")
 public class App extends StandardMBean implements AppMXBean, Runnable {
 	public static final String DB_CHARSET = "UTF-8"; //数据库字符集
-	public static final String NAME_META = "#META#";
-	public static final String PREFIX_QUEUE = "Q:";
-	public static final String PREFIX_SUB = "S:";
 
 	org.slf4j.Logger _log = org.slf4j.LoggerFactory.getLogger(this.getClass());
 	private final String CONF_NAME; //配置文件
@@ -83,8 +76,9 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	private Registry _rmiRegistry; //RIM 注册表
 	private JMXConnectorServer _jmxCS; //JMXConnectorServer
 
-	public DB _meta; //META数据库,保存队列名
-	final Map<String, FanOutQueueImplEx> _mapQueue = new ConcurrentHashMap<>();
+	private static FanOutQueueImplEx.QueueFilenameFilter queueDirFilter = new FanOutQueueImplEx.QueueFilenameFilter();
+	private static FanOutQueueImplEx.SubFilenameFilter subDirFilter = new FanOutQueueImplEx.SubFilenameFilter();
+	private Map<String, FanOutQueueImplEx> _mapQueue;
 
 	//GC的Scheduled
 	public ScheduledExecutorService _scheduleGc = Executors.newSingleThreadScheduledExecutor();
@@ -100,16 +94,12 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		try {
 			File file = new File(System.getProperty("user.dir", ".") + "/conf/");
 			if (!file.exists() && !file.mkdirs()) {
-				throw new IOException("Can not create:" + System.getProperty("user.dir", ".") + "/conf/");
+				throw new IOException("Can not create:" + file.getCanonicalPath());
 			}
 
 			file = new File(System.getProperty("user.dir", ".") + "/db/");
 			if (!file.exists() && !file.mkdirs()) {
-				throw new IOException("Can not create:" + System.getProperty("user.dir", ".") + "/db/");
-			}
-			file = new File(System.getProperty("user.dir", ".") + "/db/" + NAME_META);
-			if (!file.exists() && !file.mkdirs()) {
-				throw new IOException("Can not create:" + System.getProperty("user.dir", ".") + "/db/" + NAME_META);
+				throw new IOException("Can not create:" + file.getCanonicalPath());
 			}
 
 			final String logPath = System.getProperty("user.dir", ".") + "/conf/log4j.xml";
@@ -171,27 +161,11 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	}
 
 	private boolean validQueueName(final String queueName) {
-		if (queueName.equalsIgnoreCase(NAME_META)) {
-			return false;
-		} else if (queueName.toUpperCase().contains(PREFIX_QUEUE)) {
-			return false;
-		} else if (queueName.toUpperCase().contains(PREFIX_SUB)) {
-			return false;
-		} else {
-			return queueName.equals(sanitizeFilename(queueName));
-		}
+		return queueName.equals(sanitizeFilename(queueName));
 	}
 
 	private boolean validSubName(final String subName) {
-		if (subName.equalsIgnoreCase(NAME_META)) {
-			return false;
-		} else if (subName.toUpperCase().contains(PREFIX_QUEUE)) {
-			return false;
-		} else if (subName.toUpperCase().contains(PREFIX_SUB)) {
-			return false;
-		} else {
-			return subName.equals(sanitizeFilename(subName));
-		}
+		return subName.equals(sanitizeFilename(subName));
 	}
 
 	@Override
@@ -306,16 +280,12 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 			try {
 				_mapQueue.put(queueName, new FanOutQueueImplEx(_conf.dbPath, queueName));
-				_meta.put((PREFIX_QUEUE + queueName).getBytes(), (PREFIX_QUEUE + queueName).getBytes());
 
+				_log.info("createQueue():" + queueName);
 				return ResultCode.SUCCESS;
 			} catch (Exception ex) {
 				try {
 					_mapQueue.remove(queueName).erase();
-				} catch (Exception e) {
-				}
-				try {
-					_meta.delete((PREFIX_QUEUE + queueName).getBytes());
 				} catch (Exception e) {
 				}
 
@@ -355,16 +325,12 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 			try {
 				queue.addFanout(subName);
 
-				_meta.put((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes(), (PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
+				_log.info("createSub() Queue:" + queueName + ",Created Sub:" + subName);
 
 				return ResultCode.SUCCESS;
 			} catch (Exception ex) {
 				try {
 					queue.removeFanout(subName);
-				} catch (Exception e) {
-				}
-				try {
-					_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
 				} catch (Exception e) {
 				}
 
@@ -391,15 +357,9 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 			try {
 				queue = _mapQueue.remove(queueName);
-				List<String> subNames = queue.getAllFanoutNames();
 				queue.erase();
 
-				_meta.delete((PREFIX_QUEUE + queueName).getBytes());
-
-				for (String subName : subNames) {
-					_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
-				}
-
+				_log.info("removeQueue():" + queueName);
 				return ResultCode.SUCCESS;
 			} catch (Exception ex) {
 				_log.error(ex.getMessage(), ex);
@@ -430,8 +390,8 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 			try {
 				queue.removeFanout(subName);
-				_meta.delete((PREFIX_SUB + subName + PREFIX_QUEUE + queueName).getBytes());
 
+				_log.info("removeSub() Queue:" + queueName + ",Removed Sub:" + subName);
 				return ResultCode.SUCCESS;
 			} catch (Exception ex) {
 				_log.error(ex.getMessage(), ex);
@@ -510,6 +470,9 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 		try {
 			queue.removeAll();
+
+			_log.info("resetQueue():" + queueName);
+
 			return ResultCode.SUCCESS;
 		} catch (Exception ex) {
 			_log.error(ex.getMessage(), ex);
@@ -593,36 +556,28 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 			if (null == _conf.dbPath || 0 == _conf.dbPath.length()) {
 				_conf.dbPath = System.getProperty("user.dir", ".") + "/db";
 			}
+			File dbBaseDir = new File(_conf.dbPath);
+			if (!dbBaseDir.exists() && !dbBaseDir.mkdirs()) {
+				throw new IOException("Can not create:" + dbBaseDir.getCanonicalPath());
+			}
 
-			if (null == _meta) {
-				final Options options = new Options().createIfMissing(true);
-				options.logger(new org.iq80.leveldb.Logger() {
-					public void log(String message) {
-						//_log.info(message);
+			if (_mapQueue == null) {
+				String[] queuesDirName = dbBaseDir.list(queueDirFilter);
+				_mapQueue = new ConcurrentHashMap<>(queuesDirName.length);
+				for (String queueName : queuesDirName) {
+					FanOutQueueImplEx queue = new FanOutQueueImplEx(_conf.dbPath, queueName);
+
+					File queueDir = new File(dbBaseDir, queueName);
+					String[] subsDirName = queueDir.list(subDirFilter);
+					for (String subName : subsDirName) {
+						queue.addFanout(subName.substring(FanOutQueueImplEx.getFanoutFolderPrefix().length()));
 					}
-				});
 
-				_meta = JniDBFactory.factory.open(new File(_conf.dbPath + "/" + NAME_META), options);
-
-				try (DBIterator dbIterator = _meta.iterator()) { //初始化_mapQueue
-					for (dbIterator.seekToFirst(); dbIterator.hasNext(); dbIterator.next()) {
-						String metaKey = new String(dbIterator.peekNext().getKey());
-						if (metaKey.startsWith(PREFIX_QUEUE)) {
-							String queueName = metaKey.substring(PREFIX_QUEUE.length());
-							_mapQueue.put(queueName, new FanOutQueueImplEx(_conf.dbPath, queueName));
-						}
-					}
+					_mapQueue.put(queueName, queue);
 				}
 
-				try (DBIterator dbIterator = _meta.iterator()) { //初始化Subscriber
-					for (dbIterator.seekToFirst(); dbIterator.hasNext(); dbIterator.next()) {
-						String metaKey = new String(dbIterator.peekNext().getKey());
-						if (metaKey.startsWith(PREFIX_SUB)) {
-							String queueName = metaKey.substring(metaKey.lastIndexOf(PREFIX_QUEUE) + PREFIX_QUEUE.length());
-							String subName = metaKey.substring(PREFIX_SUB.length(), metaKey.lastIndexOf(PREFIX_QUEUE));
-							_mapQueue.get(queueName).addFanout(subName);
-						}
-					}
+				for (Map.Entry<String, FanOutQueueImplEx> entry : _mapQueue.entrySet()) {
+					_log.info("Inited Queue:" + entry.getKey() + ",Subs:" + entry.getValue().getAllFanoutNames());
 				}
 			}
 
@@ -728,16 +683,6 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 			}
 		}
 
-		if (_meta != null) {
-			try {
-				_meta.close();
-			} catch (Throwable ex) {
-				_log.error(ex.getMessage(), ex);
-			} finally {
-				_meta = null;
-			}
-		}
-
 		if (_jmxCS != null) {
 			try {
 				_jmxCS.stop();
@@ -748,12 +693,16 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 			}
 		}
 
-		for (FanOutQueueImplEx fq : _mapQueue.values()) {
-			try {
-				fq.close();
-			} catch (Exception ex) {
-				_log.error(ex.getMessage(), ex);
+		if (_mapQueue != null) {
+			for (FanOutQueueImplEx fq : _mapQueue.values()) {
+				try {
+					fq.close();
+				} catch (Exception ex) {
+					_log.error(ex.getMessage(), ex);
+				}
 			}
+			_mapQueue.clear();
+			_mapQueue = null;
 		}
 
 		if (_rmiCreated && _rmiRegistry != null) {

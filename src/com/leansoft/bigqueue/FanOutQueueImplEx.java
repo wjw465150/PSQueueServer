@@ -1,6 +1,7 @@
 package com.leansoft.bigqueue;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,4 +70,33 @@ public class FanOutQueueImplEx extends FanOutQueueImpl {
 		return new ResSubStatus(ResultCode.SUCCESS, _queueName, fanoutId, super.size(fanoutId), this.getRearIndex(), this.getFrontIndex(fanoutId));
 	}
 
+	public static String getFanoutFolderPrefix() {
+		return QUEUE_FRONT_INDEX_PAGE_FOLDER_PREFIX;
+	}
+
+	public static class QueueFilenameFilter implements FilenameFilter {
+		@Override
+		public boolean accept(File dir, String name) {
+			try {
+				File file = new File(dir, name);
+				return file.isDirectory();
+			} catch (Exception e) {
+				e.printStackTrace();
+				return false;
+			}
+		}
+	}
+
+	public static class SubFilenameFilter implements FilenameFilter {
+		@Override
+		public boolean accept(File dir, String name) {
+			try {
+				File file = new File(dir, name);
+				return (file.isDirectory() && file.getName().startsWith(QUEUE_FRONT_INDEX_PAGE_FOLDER_PREFIX));
+			} catch (Exception e) {
+				e.printStackTrace();
+				return false;
+			}
+		}
+	}
 }
