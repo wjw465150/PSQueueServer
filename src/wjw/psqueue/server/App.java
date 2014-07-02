@@ -69,7 +69,6 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	public static final String DB_CHARSET = "UTF-8"; //数据库字符集
 
 	org.slf4j.Logger _log = org.slf4j.LoggerFactory.getLogger(this.getClass());
-	private final String CONF_NAME; //配置文件
 	Conf _conf; //配置文件
 
 	private boolean _rmiCreated;
@@ -138,8 +137,6 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 				doStop();
 			}
 		}));
-
-		CONF_NAME = System.getProperty("user.dir", ".") + "/conf/conf.xml";
 
 		if (!this.doStart()) {
 			System.exit(-1);
@@ -546,12 +543,13 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 	public boolean doStart() {
 		try {
+			String confFileName = System.getProperty("user.dir", ".") + "/conf/conf.xml";
 			try {
-				_conf = Conf.load(CONF_NAME);
+				_conf = Conf.load(confFileName);
 			} catch (Exception ex) {
 				//_log.error(ex.getMessage(), ex);
 				_conf = new Conf();
-				_conf.store(CONF_NAME);
+				_conf.store(confFileName);
 			}
 			if (null == _conf.dbPath || 0 == _conf.dbPath.length()) {
 				_conf.dbPath = System.getProperty("user.dir", ".") + "/db";
