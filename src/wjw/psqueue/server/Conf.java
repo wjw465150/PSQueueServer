@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.Map;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -41,13 +42,10 @@ public class Conf {
 	public Charset charsetDefaultCharset = Charset.forName(defaultCharset); //HTTP字符集
 
 	@XmlElement(required = false)
-	public String dbPath = ""; //数据库目录,缺省在:System.getProperty("user.dir", ".") + "/db"
+	public String dbPath = System.getProperty("user.dir", ".") + "/db"; //数据库目录
 
 	@XmlElement(required = true)
 	public int gcInterval = 30; //GC间隔时间(分钟)
-
-	@XmlElement(required = true)
-	public long dbFileMaxSize = 2147483648L; //队列数据文件最大大小(字节,缺省2G)
 
 	@XmlElement(required = true)
 	public String adminUser = "admin"; //管理员用户名
@@ -58,11 +56,18 @@ public class Conf {
 	@XmlElement(required = true)
 	public int jmxPort = 1819; //JMX监听端口
 
+	@XmlElement(required = false)
+	public Map<String, QueueConf> queues;
+
 	public static Conf load(String path) throws Exception {
 		InputStream in = null;
 		try {
 			in = new FileInputStream(path);
 			Conf conf = unmarshal(Conf.class, in);
+			if (conf.dbPath.equals(System.getProperty("user.dir", ".") + "/db") == false) {
+				conf.dbPath = System.getProperty("user.dir", ".") + "/db";
+			}
+
 			return conf;
 		} finally {
 			if (in != null) {
@@ -77,9 +82,6 @@ public class Conf {
 	public void store(String path) throws Exception {
 		OutputStream out = null;
 		try {
-			if (dbPath.equals(System.getProperty("user.dir", ".") + "/db")) {
-				dbPath = "";
-			}
 			out = new FileOutputStream(path);
 			marshaller(this, out, true);
 		} finally {
@@ -126,14 +128,14 @@ public class Conf {
 		    .append(dbPath)
 		    .append(", gcInterval=")
 		    .append(gcInterval)
-		    .append(", dbFileMaxSize=")
-		    .append(dbFileMaxSize)
 		    .append(", adminUser=")
 		    .append(adminUser)
 		    .append(", adminPass=")
 		    .append(adminPass)
 		    .append(", jmxPort=")
 		    .append(jmxPort)
+		    .append(", queues=")
+		    .append(queues)
 		    .append("]");
 		return builder.toString();
 	}

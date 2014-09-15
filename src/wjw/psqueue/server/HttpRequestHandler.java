@@ -163,7 +163,14 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 					case "createQueue": {
 						final String user = (null != parameters.get("user")) ? parameters.get("user").get(0) : "";
 						final String pass = (null != parameters.get("pass")) ? parameters.get("pass").get(0) : "";
-						ResultCode res = _app.createQueue(queueName, user, pass);
+						final String size = (null != parameters.get("size")) ? parameters.get("size").get(0) : "0";
+						long lSize;
+						try {
+							lSize = Long.parseLong(size);
+						} catch (Exception e) {
+							lSize = 0;
+						}
+						ResultCode res = _app.createQueue(queueName, lSize, user, pass);
 						jsonString = JsonObject.toJson(res);
 					}
 						break;

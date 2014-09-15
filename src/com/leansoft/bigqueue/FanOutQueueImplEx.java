@@ -15,6 +15,10 @@ import com.leansoft.bigqueue.utils.FileUtil;
 public class FanOutQueueImplEx extends FanOutQueueImpl {
 	String _queueName;
 
+	public String getQueueName() {
+		return _queueName;
+	}
+
 	public FanOutQueueImplEx(String queueDir, String queueName) throws IOException {
 		super(queueDir, queueName);
 		this._queueName = queueName;
@@ -62,12 +66,12 @@ public class FanOutQueueImplEx extends FanOutQueueImpl {
 		return result;
 	}
 
-	public ResQueueStatus getQueueInfo() throws IOException {
-		return new ResQueueStatus(ResultCode.SUCCESS, _queueName, super.size(), this.getRearIndex(), this.getFrontIndex());
+	public ResQueueStatus getQueueInfo(long dbFileMaxSize) throws IOException {
+		return new ResQueueStatus(ResultCode.SUCCESS, _queueName, dbFileMaxSize, super.size(), this.getRearIndex(), this.getFrontIndex());
 	}
 
-	public ResSubStatus getFanoutInfo(String fanoutId) throws IOException {
-		return new ResSubStatus(ResultCode.SUCCESS, _queueName, fanoutId, super.size(fanoutId), this.getRearIndex(), this.getFrontIndex(fanoutId));
+	public ResSubStatus getFanoutInfo(String fanoutId, long dbFileMaxSize) throws IOException {
+		return new ResSubStatus(ResultCode.SUCCESS, _queueName, dbFileMaxSize, fanoutId, super.size(fanoutId), this.getRearIndex(), this.getFrontIndex(fanoutId));
 	}
 
 	public static String getFanoutFolderPrefix() {

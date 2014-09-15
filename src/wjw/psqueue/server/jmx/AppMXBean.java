@@ -15,8 +15,8 @@ public interface AppMXBean {
 	public ResultCode gc();
 
 	@ManagedOperation(description = "创建队列")
-	public ResultCode createQueue(@Description(name = "queueName", 
-	description = "队列名") String queueName,
+	public ResultCode createQueue(@Description(name = "queueName", description = "队列名") String queueName,
+	@Description(name = "dbFileMaxSize", description = "队列数据文件最大大小(字节)") long dbFileMaxSize,		
 	@Description(name = "user", description = "用户名") final String user,
 	@Description(name = "pass", description = "口令") final String pass);
 

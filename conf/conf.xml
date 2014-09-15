@@ -5,10 +5,25 @@
     <backlog>200</backlog>
     <soTimeout>60</soTimeout>
     <defaultCharset>UTF-8</defaultCharset>
-    <dbPath></dbPath>
+    <dbPath>E:\WJW_DATA\OpenSource\PSQueue_Workspace\PSQueueServer/db</dbPath>
     <gcInterval>30</gcInterval>
-    <dbFileMaxSize>2147483648</dbFileMaxSize>
     <adminUser>admin</adminUser>
     <adminPass>123456</adminPass>
     <jmxPort>1819</jmxPort>
+    <queues>
+        <entry>
+            <key>TEST</key>
+            <value>
+                <name>TEST</name>
+                <dbFileMaxSize>1073741824</dbFileMaxSize>
+            </value>
+        </entry>
+        <entry>
+            <key>STRING</key>
+            <value>
+                <name>STRING</name>
+                <dbFileMaxSize>2073741824</dbFileMaxSize>
+            </value>
+        </entry>
+    </queues>
 </conf>
