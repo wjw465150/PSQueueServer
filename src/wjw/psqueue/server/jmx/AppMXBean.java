@@ -16,10 +16,16 @@ public interface AppMXBean {
 
 	@ManagedOperation(description = "创建队列")
 	public ResultCode createQueue(@Description(name = "queueName", description = "队列名") String queueName,
-	@Description(name = "dbFileMaxSize", description = "队列数据文件最大大小(字节)") long dbFileMaxSize,		
+	@Description(name = "capacity", description = "队列的容量") long capacity,		
 	@Description(name = "user", description = "用户名") final String user,
 	@Description(name = "pass", description = "口令") final String pass);
 
+	@ManagedOperation(description = "设置队列的容量")
+	public ResultCode setQueueCapacity(@Description(name = "queueName", description = "队列名") String queueName,
+			@Description(name = "capacity", description = "队列的容量") long capacity,		
+	@Description(name = "user", description = "用户名") final String user,
+	@Description(name = "pass", description = "口令") final String pass);
+	
 	@ManagedOperation(description = "创建指定队列的指定订阅者")
 	public ResultCode createSub(@Description(name = "queueName", description = "队列名") String queueName, 
 			@Description(name = "subName", description = "订阅者名") String subName,

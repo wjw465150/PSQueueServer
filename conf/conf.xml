@@ -5,7 +5,6 @@
     <backlog>200</backlog>
     <soTimeout>60</soTimeout>
     <defaultCharset>UTF-8</defaultCharset>
-    <dbPath>E:\WJW_DATA\OpenSource\PSQueue_Workspace\PSQueueServer/db</dbPath>
     <gcInterval>30</gcInterval>
     <adminUser>admin</adminUser>
     <adminPass>123456</adminPass>
@@ -15,14 +14,14 @@
             <key>TEST</key>
             <value>
                 <name>TEST</name>
-                <dbFileMaxSize>1073741824</dbFileMaxSize>
+                <capacity>10000000</capacity>
             </value>
         </entry>
         <entry>
             <key>STRING</key>
             <value>
                 <name>STRING</name>
-                <dbFileMaxSize>2073741824</dbFileMaxSize>
+                <capacity>3000000</capacity>
             </value>
         </entry>
     </queues>

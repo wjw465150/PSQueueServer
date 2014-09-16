@@ -6,7 +6,7 @@ import java.io.Serializable;
 public class ResSubStatus implements Serializable {
 	public ResultCode status;
 	public String queueName;
-	public long dbFileMaxSize;
+	public long capacity;
 	public String subName;
 	public long size;
 	public long head;
@@ -21,17 +21,17 @@ public class ResSubStatus implements Serializable {
 		this.status = status;
 		this.queueName = queueName;
 		this.subName = subName;
-		this.dbFileMaxSize = 0;
+		this.capacity = 0;
 		this.size = 0;
 		this.head = 0;
 		this.tail = 0;
 	}
 
-	@ConstructorProperties({ "status", "queueName", "dbFileMaxSize", "subName", "size", "head", "tail" })
-	public ResSubStatus(ResultCode status, String queueName, long dbFileMaxSize, String subName, long size, long head, long tail) {
+	@ConstructorProperties({ "status", "queueName", "capacity", "subName", "size", "head", "tail" })
+	public ResSubStatus(ResultCode status, String queueName, long capacity, String subName, long size, long head, long tail) {
 		this.status = status;
 		this.queueName = queueName;
-		this.dbFileMaxSize = dbFileMaxSize;
+		this.capacity = capacity;
 		this.subName = subName;
 		this.size = size;
 		this.head = head;
@@ -46,8 +46,8 @@ public class ResSubStatus implements Serializable {
 		return queueName;
 	}
 
-	public long getDbFileMaxSize() {
-		return dbFileMaxSize;
+	public long getCapacity() {
+		return capacity;
 	}
 
 	public String getSubName() {
@@ -73,8 +73,8 @@ public class ResSubStatus implements Serializable {
 		    .append(status)
 		    .append(", queueName=")
 		    .append(queueName)
-		    .append(", dbFileMaxSize=")
-		    .append(dbFileMaxSize)
+		    .append(", capacity=")
+		    .append(capacity)
 		    .append(", subName=")
 		    .append(subName)
 		    .append(", size=")

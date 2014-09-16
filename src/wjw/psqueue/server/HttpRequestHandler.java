@@ -163,14 +163,28 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 					case "createQueue": {
 						final String user = (null != parameters.get("user")) ? parameters.get("user").get(0) : "";
 						final String pass = (null != parameters.get("pass")) ? parameters.get("pass").get(0) : "";
-						final String size = (null != parameters.get("size")) ? parameters.get("size").get(0) : "0";
-						long lSize;
+						final String capacity = (null != parameters.get("capacity")) ? parameters.get("capacity").get(0) : "0";
+						long lCapacity;
 						try {
-							lSize = Long.parseLong(size);
+							lCapacity = Long.parseLong(capacity);
 						} catch (Exception e) {
-							lSize = 0;
+							lCapacity = 0;
 						}
-						ResultCode res = _app.createQueue(queueName, lSize, user, pass);
+						ResultCode res = _app.createQueue(queueName, lCapacity, user, pass);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
+					case "setCapacity": {
+						final String user = (null != parameters.get("user")) ? parameters.get("user").get(0) : "";
+						final String pass = (null != parameters.get("pass")) ? parameters.get("pass").get(0) : "";
+						final String capacity = (null != parameters.get("capacity")) ? parameters.get("capacity").get(0) : "0";
+						long lCapacity;
+						try {
+							lCapacity = Long.parseLong(capacity);
+						} catch (Exception e) {
+							lCapacity = 0;
+						}
+						ResultCode res = _app.setQueueCapacity(queueName, lCapacity, user, pass);
 						jsonString = JsonObject.toJson(res);
 					}
 						break;

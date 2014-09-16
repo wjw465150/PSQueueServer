@@ -67,7 +67,10 @@ import com.leansoft.bigqueue.FanOutQueueImplEx;
 @MBean(objectName = "wjw.psqueue:type=PSQueueServer", description = "PubSub Queue Server")
 public class App extends StandardMBean implements AppMXBean, Runnable {
 	public static final String DB_CHARSET = "UTF-8"; //数据库字符集
-	public static final long DBFILE_MAXSIZE = 2147483648L; //队列数据文件最大大小(字节,缺省2G)
+	public static final long DEFAULT_CAPACITY = 10000000L; //队列的缺省容量,1千万.
+
+	private static String CONF_FILE_NAME = System.getProperty("user.dir", ".") + "/conf/conf.xml"; //配置文件名
+	private static String DB_PATH = System.getProperty("user.dir", ".") + "/db"; //数据文件根目录
 
 	org.slf4j.Logger _log = org.slf4j.LoggerFactory.getLogger(this.getClass());
 	Conf _conf; //配置文件
@@ -251,7 +254,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	public ResultCode gc() {
 		for (FanOutQueueImplEx fq : _mapQueue.values()) {
 			try {
-				fq.limitBackFileSize(_conf.queues.get(fq.getQueueName()).dbFileMaxSize);
+				fq.limitCapacity(_conf.queues.get(fq.getQueueName()).capacity);
 			} catch (Exception ex) {
 				_log.error(ex.getMessage(), ex);
 			}
@@ -260,7 +263,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		return ResultCode.SUCCESS;
 	}
 
-	public ResultCode createQueue(String queueName, long dbFileMaxSize, final String user, final String pass) {
+	public ResultCode createQueue(String queueName, long capacity, final String user, final String pass) {
 		_lock.lock();
 		try {
 			queueName = queueName.toUpperCase();
@@ -276,16 +279,15 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 				return ResultCode.QUEUE_IS_EXIST;
 			}
 
-			if (dbFileMaxSize < 1L * (1024 * 1024 * 1024) || dbFileMaxSize > 50L * (1024 * 1024 * 1024)) {
-				return ResultCode.QUEUE_SZIE_INVALID;
+			if (capacity < 1000000L || capacity > 1000000000L) {
+				return ResultCode.QUEUE_CAPACITY_INVALID;
 			}
 
 			try {
-				_mapQueue.put(queueName, new FanOutQueueImplEx(_conf.dbPath, queueName));
-				
-				_conf.queues.put(queueName, new QueueConf(queueName, dbFileMaxSize));
-				String confFileName = System.getProperty("user.dir", ".") + "/conf/conf.xml";
-				_conf.store(confFileName);
+				_mapQueue.put(queueName, new FanOutQueueImplEx(DB_PATH, queueName));
+
+				_conf.queues.put(queueName, new QueueConf(queueName, capacity));
+				_conf.store(CONF_FILE_NAME);
 
 				_log.info("createQueue():" + queueName);
 				return ResultCode.SUCCESS;
@@ -297,6 +299,48 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 				_log.error(ex.getMessage(), ex);
 				return ResultCode.QUEUE_CREATE_ERROR;
+			}
+		} finally {
+			_lock.unlock();
+		}
+	}
+
+	public ResultCode setQueueCapacity(String queueName, long capacity, final String user, final String pass) {
+		_lock.lock();
+		try {
+			queueName = queueName.toUpperCase();
+			if (validUser(user, pass) == false) {
+				return ResultCode.AUTHENTICATION_FAILURE;
+			}
+
+			if (validQueueName(queueName) == false) {
+				return ResultCode.QUEUE_NAME_INVALID;
+			}
+
+			if (_mapQueue.get(queueName) == null) {
+				return ResultCode.QUEUE_NOT_EXIST;
+			}
+
+			if (capacity < 1000000L || capacity > 1000000000L) {
+				return ResultCode.QUEUE_CAPACITY_INVALID;
+			}
+
+			try {
+				_mapQueue.get(queueName).limitCapacity(capacity);
+
+				_conf.queues.put(queueName, new QueueConf(queueName, capacity));
+				_conf.store(CONF_FILE_NAME);
+
+				_log.info("setQueueCapacity():" + queueName);
+				return ResultCode.SUCCESS;
+			} catch (Exception ex) {
+				try {
+					_mapQueue.remove(queueName).erase();
+				} catch (Exception e) {
+				}
+
+				_log.error(ex.getMessage(), ex);
+				return ResultCode.INTERNAL_ERROR;
 			}
 		} finally {
 			_lock.unlock();
@@ -366,8 +410,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 				queue.erase();
 
 				_conf.queues.remove(queueName);
-				String confFileName = System.getProperty("user.dir", ".") + "/conf/conf.xml";
-				_conf.store(confFileName);
+				_conf.store(CONF_FILE_NAME);
 
 				_log.info("removeQueue():" + queueName);
 				return ResultCode.SUCCESS;
@@ -420,7 +463,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 
 		try {
-			return queue.getQueueInfo(_conf.queues.get(queueName).dbFileMaxSize);
+			return queue.getQueueInfo(_conf.queues.get(queueName).capacity);
 		} catch (Exception ex) {
 			_log.error(ex.getMessage(), ex);
 			return new ResQueueStatus(ResultCode.INTERNAL_ERROR, queueName);
@@ -440,7 +483,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 
 		try {
-			return queue.getFanoutInfo(subName, _conf.queues.get(queueName).dbFileMaxSize);
+			return queue.getFanoutInfo(subName, _conf.queues.get(queueName).capacity);
 		} catch (Exception ex) {
 			_log.error(ex.getMessage(), ex);
 			return new ResSubStatus(ResultCode.INTERNAL_ERROR, queueName, subName);
@@ -556,18 +599,14 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 	public boolean doStart() {
 		try {
-			String confFileName = System.getProperty("user.dir", ".") + "/conf/conf.xml";
 			try {
-				_conf = Conf.load(confFileName);
+				_conf = Conf.load(CONF_FILE_NAME);
 			} catch (Exception ex) {
 				//_log.error(ex.getMessage(), ex);
 				_conf = new Conf();
-				_conf.store(confFileName);
+				_conf.store(CONF_FILE_NAME);
 			}
-			if (null == _conf.dbPath || 0 == _conf.dbPath.length()) {
-				_conf.dbPath = System.getProperty("user.dir", ".") + "/db";
-			}
-			File dbBaseDir = new File(_conf.dbPath);
+			File dbBaseDir = new File(DB_PATH);
 			if (!dbBaseDir.exists() && !dbBaseDir.mkdirs()) {
 				throw new IOException("Can not create:" + dbBaseDir.getCanonicalPath());
 			}
@@ -580,7 +619,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 				_mapQueue = new ConcurrentHashMap<>(queuesDirName.length);
 				for (String queueName : queuesDirName) {
-					FanOutQueueImplEx queue = new FanOutQueueImplEx(_conf.dbPath, queueName);
+					FanOutQueueImplEx queue = new FanOutQueueImplEx(DB_PATH, queueName);
 
 					File queueDir = new File(dbBaseDir, queueName);
 					String[] subsDirName = queueDir.list(subDirFilter);
@@ -590,7 +629,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 					_mapQueue.put(queueName, queue);
 					if (_conf.queues.containsKey(queueName) == false) { //校验配置文件1
-						_conf.queues.put(queueName, new QueueConf(queueName, DBFILE_MAXSIZE));
+						_conf.queues.put(queueName, new QueueConf(queueName, DEFAULT_CAPACITY));
 					}
 				}
 
@@ -600,10 +639,10 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 						_conf.queues.remove(queueName);
 					}
 				}
-				_conf.store(confFileName);
+				_conf.store(CONF_FILE_NAME);
 
 				for (Map.Entry<String, FanOutQueueImplEx> entry : _mapQueue.entrySet()) {
-					_log.info("Inited Queue:" + entry.getKey() + ",dbFileMaxSize:" + _conf.queues.get(entry.getKey()).dbFileMaxSize + ",Subs:" + entry.getValue().getAllFanoutNames());
+					_log.info("Inited Queue:" + entry.getKey() + ",capacity:" + _conf.queues.get(entry.getKey()).capacity + ",Subs:" + entry.getValue().getAllFanoutNames());
 				}
 			}
 

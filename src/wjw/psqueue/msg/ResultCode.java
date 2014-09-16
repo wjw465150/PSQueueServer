@@ -21,7 +21,7 @@ public class ResultCode {
 	public final static ResultCode QUEUE_ADD_ERROR = new ResultCode(15, "queue add error");
 	public final static ResultCode QUEUE_POLL_ERROR = new ResultCode(16, "queue poll error");
 	public final static ResultCode ALL_MESSAGE_CONSUMED = new ResultCode(17, "all message consumed");
-	public final static ResultCode QUEUE_SZIE_INVALID = new ResultCode(18, "queue dbFileMaxSize must >=1G AND <=50G");
+	public final static ResultCode QUEUE_CAPACITY_INVALID = new ResultCode(18, "queue capacity must >=1000000L AND <=1000000000L");
 	
 	public int code;
 	public String msg;

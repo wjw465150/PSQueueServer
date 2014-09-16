@@ -41,9 +41,6 @@ public class Conf {
 	@XmlTransient
 	public Charset charsetDefaultCharset = Charset.forName(defaultCharset); //HTTP字符集
 
-	@XmlElement(required = false)
-	public String dbPath = System.getProperty("user.dir", ".") + "/db"; //数据库目录
-
 	@XmlElement(required = true)
 	public int gcInterval = 30; //GC间隔时间(分钟)
 
@@ -64,10 +61,6 @@ public class Conf {
 		try {
 			in = new FileInputStream(path);
 			Conf conf = unmarshal(Conf.class, in);
-			if (conf.dbPath.equals(System.getProperty("user.dir", ".") + "/db") == false) {
-				conf.dbPath = System.getProperty("user.dir", ".") + "/db";
-			}
-
 			return conf;
 		} finally {
 			if (in != null) {
@@ -124,8 +117,6 @@ public class Conf {
 		    .append(soTimeout)
 		    .append(", defaultCharset=")
 		    .append(defaultCharset)
-		    .append(", dbPath=")
-		    .append(dbPath)
 		    .append(", gcInterval=")
 		    .append(gcInterval)
 		    .append(", adminUser=")
@@ -140,15 +131,4 @@ public class Conf {
 		return builder.toString();
 	}
 
-	public static void main(String[] args) {
-		Conf confA = new Conf();
-		try {
-			confA.dbPath = "c:\\abc";
-			confA.store("z:/1.xml");
-			confA = Conf.load("z:/1.xml");
-			System.out.println(confA);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 }
