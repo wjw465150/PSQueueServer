@@ -9,20 +9,4 @@
     <adminUser>admin</adminUser>
     <adminPass>123456</adminPass>
     <jmxPort>1819</jmxPort>
-    <queues>
-        <entry>
-            <key>TEST</key>
-            <value>
-                <name>TEST</name>
-                <capacity>10000000</capacity>
-            </value>
-        </entry>
-        <entry>
-            <key>STRING</key>
-            <value>
-                <name>STRING</name>
-                <capacity>3000000</capacity>
-            </value>
-        </entry>
-    </queues>
 </conf>

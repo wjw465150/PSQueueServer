@@ -1,8 +1,14 @@
 package com.leansoft.bigqueue;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,6 +20,8 @@ import com.leansoft.bigqueue.utils.FileUtil;
 
 public class FanOutQueueImplEx extends FanOutQueueImpl {
 	public final static int MINI_TRUNCATE_SIZE = 100000;
+	public final static long DEFAULT_CAPACITY = 10000000L; //队列的缺省容量,1千万.
+	public final static String FILENAME_CAPACITY = "capacity.dat";
 
 	String _queueName;
 
@@ -21,16 +29,69 @@ public class FanOutQueueImplEx extends FanOutQueueImpl {
 		return _queueName;
 	}
 
+	long _capacity;
+
+	public long getCapacity() {
+		return this._capacity;
+	}
+
+	private long getCapacityFromFile() throws Exception {
+		String name = super.innerArray.arrayDirectory;
+		this._capacity = Long.parseLong(readFileToString(new File(name, FILENAME_CAPACITY), "UTF-8"));
+		return this._capacity;
+	}
+
+	public void setCapacity(long capacity) throws Exception {
+		this._capacity = capacity;
+
+		String name = super.innerArray.arrayDirectory;
+
+		writeStringToFile(new File(name, FILENAME_CAPACITY), String.valueOf(this._capacity), "UTF-8");
+	}
+
 	public FanOutQueueImplEx(String queueDir, String queueName) throws IOException {
 		super(queueDir, queueName);
 		this._queueName = queueName;
+
+		try {
+			this._capacity = getCapacityFromFile();
+		} catch (Throwable thex) {
+			this._capacity = DEFAULT_CAPACITY;
+			try {
+				setCapacity(this._capacity);
+			} catch (Exception e) {
+				throw new IOException(e);
+			}
+		}
 	}
 
 	public FanOutQueueImplEx(String queueDir, String queueName, int pageSize) throws IOException {
 		super(queueDir, queueName, pageSize);
 		this._queueName = queueName;
+
+		try {
+			this._capacity = getCapacityFromFile();
+		} catch (Throwable thex) {
+			this._capacity = DEFAULT_CAPACITY;
+			try {
+				setCapacity(this._capacity);
+			} catch (Exception e) {
+				throw new IOException(e);
+			}
+		}
 	}
 
+/*	@wjw_note: add时,是否检查容量?
+	@Override
+	public long enqueue(byte[] data) throws IOException {
+		if (this.innerArray.size() >= this._capacity) {
+			return -1L; //queue is full!!!
+		} else {
+			return super.enqueue(data);
+		}
+	}
+*/
+	
 	//返回Queue占用的磁盘空间
 	public long getDiskSize() { //跟BigArrayImpl.getBackFileSize()的区别是:不包含index文件!
 		return super.innerArray.dataPageFactory.getBackPageFileSet().size();
@@ -75,13 +136,13 @@ public class FanOutQueueImplEx extends FanOutQueueImpl {
 	}
 
 	//返回Queue信息
-	public ResQueueStatus getQueueInfo(long capacity) throws IOException {
-		return new ResQueueStatus(ResultCode.SUCCESS, _queueName, capacity, super.size(), this.getRearIndex(), this.getFrontIndex());
+	public ResQueueStatus getQueueInfo() throws IOException {
+		return new ResQueueStatus(ResultCode.SUCCESS, _queueName, this._capacity, super.size(), this.getRearIndex(), this.getFrontIndex());
 	}
 
 	//返回Sub信息
-	public ResSubStatus getFanoutInfo(String fanoutId, long capacity) throws IOException {
-		return new ResSubStatus(ResultCode.SUCCESS, _queueName, capacity, fanoutId, super.size(fanoutId), this.getRearIndex(), this.getFrontIndex(fanoutId));
+	public ResSubStatus getFanoutInfo(String fanoutId) throws IOException {
+		return new ResSubStatus(ResultCode.SUCCESS, _queueName, this._capacity, fanoutId, super.size(fanoutId), this.getRearIndex(), this.getFrontIndex(fanoutId));
 	}
 
 	//返回Sub的目录前缀
@@ -90,8 +151,8 @@ public class FanOutQueueImplEx extends FanOutQueueImpl {
 	}
 
 	//限制容量
-	public void limitCapacity(long capacity) throws IOException {
-		long toTruncateSize = this.size() - capacity;
+	public void limitCapacity() throws IOException {
+		long toTruncateSize = this.size() - this._capacity;
 		if (toTruncateSize < MINI_TRUNCATE_SIZE) {
 			return;
 		}
@@ -115,7 +176,7 @@ public class FanOutQueueImplEx extends FanOutQueueImpl {
 					qf.writeLock.unlock();
 				}
 			}
-			
+
 		} finally {
 			this.innerArray.arrayWriteLock.unlock();
 		}
@@ -147,4 +208,33 @@ public class FanOutQueueImplEx extends FanOutQueueImpl {
 			}
 		}
 	}
+
+	public static String readFileToString(File file, String encoding) throws IOException {
+		FileChannel channel = new FileInputStream(file).getChannel();
+		Charset charset = Charset.forName(encoding);
+		try {
+			ByteBuffer buf = ByteBuffer.allocate((int) file.length());
+			if (channel.read(buf) != -1) {
+				buf.flip();
+				CharBuffer charBuffer = charset.decode(buf);
+				return charBuffer.toString();
+			} else {
+				return "";
+			}
+		} finally {
+			channel.close();
+		}
+	}
+
+	public static void writeStringToFile(File file, String data, String encoding) throws IOException {
+		FileChannel channel = new FileOutputStream(file).getChannel();
+		Charset charset = Charset.forName(encoding);
+		try {
+			ByteBuffer buf = charset.encode(data);
+			channel.write(buf);
+		} finally {
+			channel.close();
+		}
+	}
+
 }

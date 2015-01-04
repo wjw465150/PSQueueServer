@@ -67,7 +67,6 @@ import com.leansoft.bigqueue.FanOutQueueImplEx;
 @MBean(objectName = "wjw.psqueue:type=PSQueueServer", description = "PubSub Queue Server")
 public class App extends StandardMBean implements AppMXBean, Runnable {
 	public static final String DB_CHARSET = "UTF-8"; //数据库字符集
-	public static final long DEFAULT_CAPACITY = 10000000L; //队列的缺省容量,1千万.
 
 	private static String CONF_FILE_NAME = System.getProperty("user.dir", ".") + "/conf/conf.xml"; //配置文件名
 	private static String DB_PATH = System.getProperty("user.dir", ".") + "/db"; //数据文件根目录
@@ -254,7 +253,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	public ResultCode gc() {
 		for (FanOutQueueImplEx fq : _mapQueue.values()) {
 			try {
-				fq.limitCapacity(_conf.queues.get(fq.getQueueName()).capacity);
+				fq.limitCapacity();
 			} catch (Exception ex) {
 				_log.error(ex.getMessage(), ex);
 			}
@@ -285,9 +284,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 			try {
 				_mapQueue.put(queueName, new FanOutQueueImplEx(DB_PATH, queueName));
-
-				_conf.queues.put(queueName, new QueueConf(queueName, capacity));
-				_conf.store(CONF_FILE_NAME);
+				_mapQueue.get(queueName).setCapacity(capacity);
 
 				_log.info("createQueue():" + queueName);
 				return ResultCode.SUCCESS;
@@ -326,10 +323,8 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 			}
 
 			try {
-				_mapQueue.get(queueName).limitCapacity(capacity);
-
-				_conf.queues.put(queueName, new QueueConf(queueName, capacity));
-				_conf.store(CONF_FILE_NAME);
+				_mapQueue.get(queueName).setCapacity(capacity);
+				_mapQueue.get(queueName).limitCapacity();
 
 				_log.info("setQueueCapacity():" + queueName);
 				return ResultCode.SUCCESS;
@@ -409,9 +404,6 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 				queue = _mapQueue.remove(queueName);
 				queue.erase();
 
-				_conf.queues.remove(queueName);
-				_conf.store(CONF_FILE_NAME);
-
 				_log.info("removeQueue():" + queueName);
 				return ResultCode.SUCCESS;
 			} catch (Exception ex) {
@@ -463,7 +455,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 
 		try {
-			return queue.getQueueInfo(_conf.queues.get(queueName).capacity);
+			return queue.getQueueInfo();
 		} catch (Exception ex) {
 			_log.error(ex.getMessage(), ex);
 			return new ResQueueStatus(ResultCode.INTERNAL_ERROR, queueName);
@@ -483,7 +475,7 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 
 		try {
-			return queue.getFanoutInfo(subName, _conf.queues.get(queueName).capacity);
+			return queue.getFanoutInfo(subName);
 		} catch (Exception ex) {
 			_log.error(ex.getMessage(), ex);
 			return new ResSubStatus(ResultCode.INTERNAL_ERROR, queueName, subName);
@@ -601,8 +593,9 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		try {
 			try {
 				_conf = Conf.load(CONF_FILE_NAME);
+				_conf.store(CONF_FILE_NAME);
 			} catch (Exception ex) {
-				//_log.error(ex.getMessage(), ex);
+				_log.error(ex.getMessage(), ex);
 				_conf = new Conf();
 				_conf.store(CONF_FILE_NAME);
 			}
@@ -613,9 +606,6 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 
 			if (_mapQueue == null) {
 				String[] queuesDirName = dbBaseDir.list(queueDirFilter);
-				if (_conf.queues == null) {
-					_conf.queues = new HashMap<String, QueueConf>(queuesDirName.length);
-				}
 
 				_mapQueue = new ConcurrentHashMap<>(queuesDirName.length);
 				for (String queueName : queuesDirName) {
@@ -628,21 +618,10 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 					}
 
 					_mapQueue.put(queueName, queue);
-					if (_conf.queues.containsKey(queueName) == false) { //校验配置文件1
-						_conf.queues.put(queueName, new QueueConf(queueName, DEFAULT_CAPACITY));
-					}
 				}
-
-				String[] confQueues = _conf.queues.keySet().toArray(new String[0]);
-				for (String queueName : confQueues) { //校验配置文件2
-					if (_mapQueue.containsKey(queueName) == false) {
-						_conf.queues.remove(queueName);
-					}
-				}
-				_conf.store(CONF_FILE_NAME);
 
 				for (Map.Entry<String, FanOutQueueImplEx> entry : _mapQueue.entrySet()) {
-					_log.info("Inited Queue:" + entry.getKey() + ",capacity:" + _conf.queues.get(entry.getKey()).capacity + ",Subs:" + entry.getValue().getAllFanoutNames());
+					_log.info("Inited Queue:" + entry.getKey() + ",capacity:" + entry.getValue().getCapacity() + ",Subs:" + entry.getValue().getAllFanoutNames());
 				}
 			}
 

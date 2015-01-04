@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.util.Map;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -52,9 +51,6 @@ public class Conf {
 
 	@XmlElement(required = true)
 	public int jmxPort = 1819; //JMX¼àÌý¶Ë¿Ú
-
-	@XmlElement(required = false)
-	public Map<String, QueueConf> queues;
 
 	public static Conf load(String path) throws Exception {
 		InputStream in = null;
@@ -122,11 +118,9 @@ public class Conf {
 		    .append(", adminUser=")
 		    .append(adminUser)
 		    .append(", adminPass=")
-		    .append(adminPass)
+		    .append("******")
 		    .append(", jmxPort=")
 		    .append(jmxPort)
-		    .append(", queues=")
-		    .append(queues)
 		    .append("]");
 		return builder.toString();
 	}
