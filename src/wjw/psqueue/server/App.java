@@ -503,17 +503,17 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	}
 
 	public ResultCode resetQueue(String queueName, final String user, final String pass) {
-		queueName = queueName.toUpperCase();
-		if (validUser(user, pass) == false) {
-			return ResultCode.AUTHENTICATION_FAILURE;
-		}
-
-		FanOutQueueImplEx queue = _mapQueue.get(queueName);
-		if (queue == null) {
-			return ResultCode.QUEUE_NOT_EXIST;
-		}
-
 		try {
+			queueName = queueName.toUpperCase();
+			if (validUser(user, pass) == false) {
+				return ResultCode.AUTHENTICATION_FAILURE;
+			}
+
+			FanOutQueueImplEx queue = _mapQueue.get(queueName);
+			if (queue == null) {
+				return ResultCode.QUEUE_NOT_EXIST;
+			}
+
 			queue.removeAll();
 
 			_log.info("resetQueue():" + queueName);
@@ -526,13 +526,13 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	}
 
 	public ResAdd add(String queueName, final String data) {
-		queueName = queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(queueName);
-		if (queue == null) {
-			return new ResAdd(ResultCode.QUEUE_NOT_EXIST);
-		}
-
 		try {
+			queueName = queueName.toUpperCase();
+			FanOutQueueImplEx queue = _mapQueue.get(queueName);
+			if (queue == null) {
+				return new ResAdd(ResultCode.QUEUE_NOT_EXIST);
+			}
+
 			long idx = queue.enqueue(data.getBytes(DB_CHARSET));
 
 			return new ResAdd(ResultCode.SUCCESS, idx);
@@ -543,18 +543,18 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	}
 
 	public ResData poll(String queueName, String subName) {
-		queueName = queueName.toUpperCase();
-		subName = subName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(queueName);
-		if (queue == null) {
-			return new ResData(ResultCode.QUEUE_NOT_EXIST);
-		}
-
-		if (queue.containFanout(subName) == false) {
-			return new ResData(ResultCode.SUB_NOT_EXIST);
-		}
-
 		try {
+			queueName = queueName.toUpperCase();
+			subName = subName.toUpperCase();
+			FanOutQueueImplEx queue = _mapQueue.get(queueName);
+			if (queue == null) {
+				return new ResData(ResultCode.QUEUE_NOT_EXIST);
+			}
+
+			if (queue.containFanout(subName) == false) {
+				return new ResData(ResultCode.SUB_NOT_EXIST);
+			}
+
 			byte[] bb = queue.dequeue(subName);
 			if (bb == null) {
 				return new ResData(ResultCode.ALL_MESSAGE_CONSUMED);
@@ -572,13 +572,13 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 	}
 
 	public ResData view(String queueName, final long pos) {
-		queueName = queueName.toUpperCase();
-		FanOutQueueImplEx queue = _mapQueue.get(queueName);
-		if (queue == null) {
-			return new ResData(ResultCode.QUEUE_NOT_EXIST);
-		}
-
 		try {
+			queueName = queueName.toUpperCase();
+			FanOutQueueImplEx queue = _mapQueue.get(queueName);
+			if (queue == null) {
+				return new ResData(ResultCode.QUEUE_NOT_EXIST);
+			}
+
 			byte[] bb = queue.get(pos);
 			return new ResData(ResultCode.SUCCESS, new String(bb, DB_CHARSET));
 		} catch (IndexOutOfBoundsException ex) {

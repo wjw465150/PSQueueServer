@@ -1,0 +1,9 @@
+入队列:
+http://192.168.1.22:1818/?qname=TEST_QUEUE&opt=add&charset=UTF-8&data=test1测试
+
+查看指定位置的消息
+http://192.168.1.22:1818/?qname=TEST_QUEUE&opt=view&charset=UTF-8&pos=0
+
+出队列
+http://192.168.1.22:1818/?qname=TEST_QUEUE&sname=TEST_SUB&opt=poll&charset=UTF-8
+
