@@ -240,6 +240,9 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 			respBuf.writeBytes(jsonString.getBytes(charsetObj));
 		} catch (Throwable ex) {
 			_app._log.error(ex.getMessage(), ex);
+
+			String jsonString = JsonObject.toJson(new ResData(new ResultCode(500, "internal error:" + ex.getMessage())));
+			respBuf.writeBytes(jsonString.getBytes(charsetObj));
 		}
 
 		response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, respBuf.readableBytes());
