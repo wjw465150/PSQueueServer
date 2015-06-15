@@ -1,6 +1,8 @@
 package wjw.psqueue.server.jmx;
 
 
+import java.io.IOException;
+
 import wjw.psqueue.msg.ResAdd;
 import wjw.psqueue.msg.ResData;
 import wjw.psqueue.msg.ResList;
@@ -73,4 +75,11 @@ public interface AppMXBean {
 	@ManagedOperation(description = "查看指定队列内容")
 	public ResData view(@Description(name = "queueName", description = "队列名") String queueName, 
 			@Description(name = "pos", description = "查看的位置") final long pos);
+	
+	@ManagedOperation(description = "设置指定队列的指定订阅者的索引起始位置")
+	public ResultCode setSubTailPos(@Description(name = "queueName", description = "队列名") String queueName,
+			@Description(name = "subName", description = "订阅者名") String subName,
+			@Description(name = "pos", description = "起始的位置") final long pos,
+			@Description(name = "user", description = "用户名") final String user,
+			@Description(name = "pass", description = "口令") final String pass);
 }

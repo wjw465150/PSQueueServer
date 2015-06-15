@@ -589,6 +589,34 @@ public class App extends StandardMBean implements AppMXBean, Runnable {
 		}
 	}
 
+	public ResultCode setSubTailPos(String queueName, String subName, final long pos, final String user, final String pass) {
+		try {
+			if (validUser(user, pass) == false) {
+				return ResultCode.AUTHENTICATION_FAILURE;
+			}
+
+			queueName = queueName.toUpperCase();
+			subName = subName.toUpperCase();
+			FanOutQueueImplEx queue = _mapQueue.get(queueName);
+			if (queue == null) {
+				return ResultCode.QUEUE_NOT_EXIST;
+			}
+
+			if (queue.containFanout(subName) == false) {
+				return ResultCode.SUB_NOT_EXIST;
+			}
+
+			queue.resetQueueFrontIndex(subName, pos);
+
+			_log.info("setSubTailPos():" + queueName + ":" + subName + ":" + pos);
+
+			return ResultCode.SUCCESS;
+		} catch (Exception ex) {
+			_log.error(ex.getMessage(), ex);
+			return ResultCode.SUB_TAILPOS_ERROR;
+		}
+	}
+
 	public boolean doStart() {
 		try {
 			try {

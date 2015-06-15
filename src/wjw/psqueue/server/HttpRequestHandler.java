@@ -228,6 +228,21 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 						jsonString = JsonObject.toJson(res);
 					}
 						break;
+					case "setSubTailPos": {
+						final String subName = (null != parameters.get("sname")) ? parameters.get("sname").get(0) : null; // 订阅者名称 
+						final String user = (null != parameters.get("user")) ? parameters.get("user").get(0) : "";
+						final String pass = (null != parameters.get("pass")) ? parameters.get("pass").get(0) : "";
+
+						final String pos_tmp = (null != parameters.get("pos")) ? parameters.get("pos").get(0) : null; //队列位置点
+						long pos = -1;
+						if (null != pos_tmp) {
+							pos = Long.parseLong(pos_tmp);
+						}
+
+						ResultCode res = _app.setSubTailPos(queueName, subName, pos, user, pass);
+						jsonString = JsonObject.toJson(res);
+					}
+						break;
 					default: {
 						jsonString = JsonObject.toJson(new ResData(ResultCode.CMD_INVALID));
 					}

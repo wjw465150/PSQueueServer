@@ -22,6 +22,7 @@ public class ResultCode {
 	public final static ResultCode QUEUE_POLL_ERROR = new ResultCode(16, "queue poll error");
 	public final static ResultCode ALL_MESSAGE_CONSUMED = new ResultCode(17, "all message consumed");
 	public final static ResultCode QUEUE_CAPACITY_INVALID = new ResultCode(18, "queue capacity must >=1000000L AND <=1000000000L");
+	public final static ResultCode SUB_TAILPOS_ERROR = new ResultCode(19, "Subscriber set tail pos error");
 	
 	public int code;
 	public String msg;
