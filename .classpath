@@ -8,6 +8,6 @@
 	<classpathentry kind="lib" path="bin/wrapper.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j.jar"/>
-	<classpathentry kind="lib" path="lib/netty-all-4.0.34.Final.jar"/>
+	<classpathentry kind="lib" path="lib/netty-all-4.0.35.Final.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>
