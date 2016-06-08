@@ -1,5 +1,12 @@
 package wjw.psqueue.server;
 
+import java.net.URLDecoder;
+import java.nio.charset.Charset;
+import java.util.List;
+import java.util.Map;
+
+import org.wjw.efjson.JsonObject;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -8,18 +15,12 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
-
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
-import java.util.List;
-import java.util.Map;
-
-import org.wjw.efjson.JsonObject;
-
 import wjw.psqueue.msg.ResAdd;
 import wjw.psqueue.msg.ResData;
 import wjw.psqueue.msg.ResList;
@@ -71,7 +72,7 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 		FullHttpRequest request = (FullHttpRequest) msg;
 
 		//分析URL参数
-		QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri(), _app._conf.charsetDefaultCharset);
+		QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri(), _app._conf.charsetDefaultCharset);
 		Map<String, List<String>> parameters = queryStringDecoder.parameters();
 
 		String charset = (null != parameters.get("charset")) ? parameters.get("charset").get(0) : null; //先从query里查找charset
@@ -83,7 +84,7 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 					charset = _app._conf.defaultCharset;
 				} else if (!charset.equalsIgnoreCase(_app._conf.defaultCharset)) { //说明查询参数里指定了字符集,并且与缺省字符集不一致
 					charsetObj = Charset.forName(charset);
-					queryStringDecoder = new QueryStringDecoder(request.getUri(), charsetObj);
+					queryStringDecoder = new QueryStringDecoder(request.uri(), charsetObj);
 					parameters = queryStringDecoder.parameters();
 				}
 			} else {
@@ -91,7 +92,7 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 			}
 		} else if (!charset.equalsIgnoreCase(_app._conf.defaultCharset)) { //说明查询参数里指定了字符集,并且与缺省字符集不一致
 			charsetObj = Charset.forName(charset);
-			queryStringDecoder = new QueryStringDecoder(request.getUri(), charsetObj);
+			queryStringDecoder = new QueryStringDecoder(request.uri(), charsetObj);
 			parameters = queryStringDecoder.parameters();
 		}
 
@@ -105,9 +106,9 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 
 		//返回给用户的Header头信息
 		FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.buffer(64));
-		response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/plain;charset=" + charsetObj.name());
-		response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
-		response.headers().set(HttpHeaders.Names.CACHE_CONTROL, HttpHeaders.Values.NO_CACHE);
+		response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain;charset=" + charsetObj.name());
+		response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+		response.headers().set(HttpHeaderNames.CACHE_CONTROL, HttpHeaderValues.NO_CACHE);
 
 		ByteBuf respBuf = response.content(); //Buffer that stores the response content
 		try {
@@ -116,7 +117,7 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 				switch (opt) {
 					case "add": {
 						/* 优先接收POST正文信息 */
-						if (request.getMethod().name().equalsIgnoreCase("POST")) {
+						if (request.method().name().equalsIgnoreCase("POST")) {
 							String data = URLDecoder.decode(request.content().toString(charsetObj), charsetObj.name());
 							ResAdd res = _app.add(queueName, data);
 							jsonString = JsonObject.toJson(res);
@@ -260,10 +261,10 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 			respBuf.writeBytes(jsonString.getBytes(charsetObj));
 		}
 
-		response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, respBuf.readableBytes());
+		response.headers().set(HttpHeaderNames.CONTENT_LENGTH, respBuf.readableBytes());
 
 		// Close the non-keep-alive connection after the write operation is done.
-		boolean keepAlive = HttpHeaders.isKeepAlive(request);
+		boolean keepAlive = HttpUtil.isKeepAlive(request);
 		if (!keepAlive) {
 			ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
 		} else {
