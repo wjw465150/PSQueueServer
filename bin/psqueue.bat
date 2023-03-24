@@ -27,9 +27,9 @@ set _REALPATH=%~dp0
 
 rem Decide on the wrapper binary.
 set _WRAPPER_BASE=wrapper
-set _WRAPPER_EXE=%_REALPATH%%_WRAPPER_BASE%-windows-x86-32.exe
-if exist "%_WRAPPER_EXE%" goto validate
 set _WRAPPER_EXE=%_REALPATH%%_WRAPPER_BASE%-windows-x86-64.exe
+if exist "%_WRAPPER_EXE%" goto validate
+set _WRAPPER_EXE=%_REALPATH%%_WRAPPER_BASE%-windows-x86-32.exe
 if exist "%_WRAPPER_EXE%" goto validate
 set _WRAPPER_EXE=%_REALPATH%%_WRAPPER_BASE%.exe
 if exist "%_WRAPPER_EXE%" goto validate
